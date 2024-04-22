@@ -16,7 +16,8 @@ class State:
 		timetable_specs : dict,
 		constraints : dict | None = None,
 		timetable : dict | None = None,
-		conflicts: int | None = None,
+		hard_conflicts: int | None = None,
+		soft_conflicts: int | None = None
 	) -> None:
 
 		self.timetable_specs = timetable_specs
@@ -24,10 +25,14 @@ class State:
 			else self.set_constraints(timetable_specs)
 		self.timetable = timetable if timetable is not None \
 			else self.generate_timetable()
-		self.nconflicts = conflicts if conflicts is not None \
+		self.hard_conflicts = hard_conflicts if hard_conflicts is not None \
 			else State.__compute_hard_conflicts(self.timetable, timetable_specs)
+		self.soft_conflicts = soft_conflicts if soft_conflicts is not None \
+			else State.__compute_soft_conflicts(self.timetable, timetable_specs)
 		
 	def set_constraints(self, timetable_specs):
+		# for prof in timetable_specs[PROFESORI]:
+			# print(timetable_specs[PROFESORI][prof][CONSTRANGERI])
 		"""
 		constraints:
 			DS:
@@ -59,6 +64,7 @@ class State:
 				constraints[subject][TEACHERS].add(teacher)
 
 		constraints = dict(sorted(constraints.items(), key=lambda x: len(x[1][TEACHERS]), reverse=True))
+		# print(constraints)
 		return constraints
 
 	def apply_move(self, queen: int, new_row: int) -> State:
@@ -71,12 +77,12 @@ class State:
 
 		free_slots = {}
 		timetable = {}
-		busy_slots = {}
+		teacher_busy_slots = {}
 		for day in self.timetable_specs[ZILE]:
 			timetable[day] = {}
 			for slot in self.timetable_specs[INTERVALE]:
 				timetable[day][slot] = {}
-				busy_slots[(day, slot)] = set()
+				teacher_busy_slots[(day, slot)] = set()
 				for classroom in self.timetable_specs[CLASSROOMS]:
 					timetable[day][slot][classroom] = None
 					if classroom not in free_slots:
@@ -98,7 +104,7 @@ class State:
 
 				(day, slot) = free_slots[classroom].pop()
 
-				candidates = infos[TEACHERS] - busy_slots[(day, slot)]
+				candidates = infos[TEACHERS] - teacher_busy_slots[(day, slot)]
 				if (candidates == set()):
 					bad_solution = True
 					break
@@ -118,7 +124,7 @@ class State:
 					bad_solution = True
 					break
 
-				busy_slots[(day, slot)].add(teacher)
+				teacher_busy_slots[(day, slot)].add(teacher)
 				courses_count[teacher] += 1
 				timetable[day][slot][classroom] = (teacher, subject)
 				students_left -= capacity
@@ -146,13 +152,36 @@ class State:
 		sys.stdout = stdout
 		return constraints
 
-	def conflicts(self) -> int:
-		return self.nconflicts
+	def get_hard_conflicts(self) -> int:
+		return self.hard_conflicts
+	
+	def get_soft_conflicts(self) -> int:
+		return self.soft_conflicts
 
 	def is_final(self) -> bool:
-		return self.nconflicts == 0
+		return self.hard_conflicts == 0
 
 	def get_next_states(self) -> list[State]:
+		for day, day_values in self.timetable.items():
+			for interval, interval_values in day_values.items():
+				for classroom, classroom_value in interval_values.items():
+					# teacher, subject = classroom_values
+	 				# in classroom value pot avea fie none, fie ceva alocat
+
+					for new_day, new_day_values in self.timetable.items():
+						for new_interval, new_interval_values in new_day_values.items():
+							for new_classroom, new_classroom_value in new_interval_values.items():
+								if new_classroom_value is None:
+									continue
+
+								# new_teacher, new_subject = new_classroom_values
+								# if teacher == new_teacher:
+								# 	continue
+
+								# new_timetable = copy(self.timetable)
+								# new_timetable[day][interval][classroom] = (new_teacher, new_subject)
+								# new_timetable[new_day][new_interval][new_classroom] = (teacher, subject)
+
 		pass
 
 	def __str__(self) -> str:
@@ -162,8 +191,26 @@ class State:
 		print(self)
 
 	def clone(self) -> State:
-		return State(self.timetable_specs, self.constraints, copy(self.timetable), self.nconflicts)
-	
+		return State(self.timetable_specs, self.constraints, copy(self.timetable), self.hard_conflicts)
+
+# def stochastic_hill_climbing(initial: State, max_iters: int = 1000) -> tuple[bool, int, int, State]:
+# 	iters, states = 0, 0
+# 	state = initial.clone()
+
+# 	while iters < max_iters:
+# 		iters += 1
+
+# 		neighbours = state.get_next_states()
+# 		better_neighbours = [neighbour for neighbour in neighbours \
+# 					   if neighbour.get_soft_conflicts() < state.get_soft_conflicts()]
+# 		if len(better_neighbours) == 0:
+# 			break
+
+# 		state = random.choice(better_neighbours).clone()
+# 		states += len(neighbours)
+
+# 	return state.is_final(), iters, states, state
+
 if __name__ == '__main__':
 	filename = f'inputs/dummy.yaml'
 	# filename = f'inputs/orar_mic_exact.yaml'
@@ -176,13 +223,17 @@ if __name__ == '__main__':
 	timetable = State(timetable_specs)
 
 	tries = 0
-	while timetable.conflicts() > 0 and tries < 1000:
+	while timetable.get_hard_conflicts() > 0 and tries < 1000:
 		tries += 1
 		timetable = State(timetable_specs, timetable.constraints)
 
 	# Debug code:
 	# --------------------------------------
 	print("got it in ", tries, " tries")
+
+	print("Conflicte soft: ")
+	print(timetable.get_soft_conflicts())
+
 	import json
 	filename = 'my_output.json'
 	with open(filename, 'w') as file:
