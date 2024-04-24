@@ -14,13 +14,15 @@ class State:
 		constraints : dict | None = None,
 		timetable : dict | None = None,
 		hard_conflicts: int | None = None,
-		soft_conflicts: int | None = None
+		soft_conflicts: int | None = None,
+		orar_profesori: dict | None = None
 	) -> None:
 
 		self.timetable_specs = timetable_specs
 		self.constraints = constraints if constraints is not None \
 			else self.set_constraints(timetable_specs)
-		self.timetable = timetable if timetable is not None \
+		(self.orar_profesori, self.timetable) = (orar_profesori, timetable) \
+			if orar_profesori is not None and timetable is not None \
 			else self.generate_timetable()
 		self.hard_conflicts = hard_conflicts if hard_conflicts is not None \
 			else self.get_hard_conflicts()
@@ -29,7 +31,7 @@ class State:
 		
 		tries = 0
 		while self.hard_conflicts > 0 and tries < 1000:
-			self.timetable = self.generate_timetable()
+			self.orar_profesori, self.timetable = self.generate_timetable()
 			self.hard_conflicts = self.get_hard_conflicts()
 			tries += 1
 		
@@ -69,20 +71,20 @@ class State:
 		constraints = dict(sorted(constraints.items(), key=lambda x: len(x[1][TEACHERS]), reverse=True))
 		return constraints
 
-	def generate_timetable(self) -> dict:
-		courses_count = {}
-		for teacher in self.timetable_specs[TEACHERS]:
-			courses_count[teacher] = 0
-
+	def generate_timetable(self) -> tuple[dict, dict]:
+		orar_profesori = {}
 		free_slots = {}
 		timetable = {}
+		mini_timetable = {}
 		teacher_busy_slots = {}
 
 		for day in self.timetable_specs[ZILE]:
 			timetable[day] = {}
+			mini_timetable[day] = {}
 
 			for slot in self.timetable_specs[INTERVALE]:
 				timetable[day][slot] = {}
+				mini_timetable[day][slot] = 0 # POSIBIL SA TREBUIASCA MATERIA SI SALA! or not..
 				teacher_busy_slots[(day, slot)] = []
 
 				for classroom in self.timetable_specs[CLASSROOMS]:
@@ -93,6 +95,13 @@ class State:
 
 					free_slots[classroom].append((day, slot))
 
+		courses_count = {}
+		for teacher in self.timetable_specs[TEACHERS]:
+			courses_count[teacher] = 0
+			orar_profesori[teacher] = copy.deepcopy(mini_timetable)
+			# print("Profesorul ", teacher, " are orarul:", orar_profesori[teacher])
+
+			# orar_profesori[teacher] = {}
 		bad_solution = False
 		for subject, infos in self.constraints.items():
 			if bad_solution:
@@ -111,6 +120,7 @@ class State:
 				free_slots[classroom].remove(random_slot)
 				(day, slot) = random_slot
 
+				# Candidates are the teachers that are not busy in that slot and that can teach the subject
 				candidates = list(filter(lambda x: x not in teacher_busy_slots[(day, slot)], infos[TEACHERS]))
 				if not candidates:
 					bad_solution = True
@@ -131,12 +141,12 @@ class State:
 					break
 
 				teacher_busy_slots[(day, slot)].append(teacher)
-	
+				orar_profesori[teacher][day][slot] += 1
 				courses_count[teacher] += 1
 				timetable[day][slot][classroom] = (teacher, subject)
 				students_left -= capacity
 
-		return timetable
+		return orar_profesori, timetable
 
 	def get_hard_conflicts(self) -> int:
 		# return self.hard_conflicts
@@ -147,34 +157,8 @@ class State:
 
 	def is_final(self) -> bool:
 		return self.soft_conflicts == 0 and self.hard_conflicts == 0
- 
+ 	
 	def get_best_neigh(self) -> State:
-		# i = 0
-		best_neighbor = None
-		curr_soft_conflicts = self.soft_conflicts
-
-		for day, day_values in self.timetable.items():
-			for interval, interval_values in day_values.items():
-				for classroom, _ in interval_values.items():
-					for new_day, new_day_values in self.timetable.items():
-						for new_interval, new_interval_values in new_day_values.items():
-							for new_classroom, _ in new_interval_values.items():
-								new_state = self.generate_successor(day, interval, classroom, \
-														new_day, new_interval, new_classroom)
-								
-								if new_state is not None:
-									next_state_soft_conflicts = new_state.soft_conflicts
-									if next_state_soft_conflicts < curr_soft_conflicts:
-										# print("vecinul i = ", i, " are ", next_state_soft_conflicts, " soft uri")
-										curr_soft_conflicts = next_state_soft_conflicts
-										best_neighbor = new_state
-										if next_state_soft_conflicts == 0:
-											return best_neighbor
-										# i += 1
-
-		return best_neighbor
-	
-	def get_bestttttt(self) -> State:
 		best_neighbor = None
 		curr_soft_conflicts = self.soft_conflicts
 		days = list(self.timetable.keys())
@@ -211,10 +195,10 @@ class State:
 
 	def generate_successor(self, day: str, interval: tuple[int, int], classroom: str, \
 					   new_day: str, new_interval: tuple[int, int], new_classroom: str) -> State:
+		#  ('nume profesor', 'materia predata in acel slot')
 		first_value = self.timetable[day][interval][classroom]
 		second_value = self.timetable[new_day][new_interval][new_classroom]
 
-		# print(first_value, second_value)
 		# nu are rost sa intershimb daca ambele sunt None
 		if first_value is None and second_value is None:
 			return None
@@ -227,7 +211,9 @@ class State:
 		# daca sunt compatibile, atunci facem schimbul
 		info_first_class = self.timetable_specs[CLASSROOMS][classroom]
 		info_second_class = self.timetable_specs[CLASSROOMS][new_classroom]
-
+		if info_first_class[CAPACITY] != info_second_class[CAPACITY]:
+			return None
+		
 		if first_value is not None:
 			if first_value[1] not in info_second_class[SUBJECTS]:
 				return None
@@ -235,35 +221,54 @@ class State:
 		if second_value is not None:
 			if second_value[1] not in info_first_class[SUBJECTS]:
 				return None
-		
+
 		# verific ca au si capacitatile egale
 		if first_value is not None and second_value is not None:
-			if info_first_class[CAPACITY] != info_second_class[CAPACITY]:
-				return None
-			
+		
+			# materiile la care poate sa predea primul profesor ales
 			info_first_subject = self.timetable_specs[TEACHERS][first_value[0]][SUBJECTS]
+
+			# materiile la care poate sa predea al doilea profesor ales
 			info_second_subject = self.timetable_specs[TEACHERS][second_value[0]][SUBJECTS]
-			# print(info_first_subject, info_second_subject)
-			# print(first_value[1], second_value[1])
-			# print("\n")
+
 			if first_value[1] not in info_second_subject \
 				or second_value[1] not in info_first_subject:
 				return None
-		
-		
+			
+			# trebuie sa verific ca intervalele profesorilor nu sunt deja ocupate
+			if self.orar_profesori[first_value[0]][new_day][new_interval] > 0 \
+				or self.orar_profesori[second_value[0]][day][interval] > 0:
+				return None
+			
 		new_timetable = copy.deepcopy(self.timetable)
+		new_orar_profesori = copy.deepcopy(self.orar_profesori)
+
+		if first_value is not None:
+			if self.orar_profesori[first_value[0]][new_day][new_interval] > 0:
+				return None
+			
+			new_orar_profesori[first_value[0]][new_day][new_interval] += 1
+			new_orar_profesori[first_value[0]][day][interval] = 0
+
+		if second_value is not None:
+			if self.orar_profesori[second_value[0]][day][interval] > 0:
+				return None
+			
+			new_orar_profesori[second_value[0]][day][interval] += 1
+			new_orar_profesori[second_value[0]][new_day][new_interval] = 0
+
 		new_timetable[day][interval][classroom], new_timetable[new_day][new_interval][new_classroom] = \
 			second_value, first_value
 		
-		# print("\nACUM -----------------------------------------------------------")
-		calcul_nou = check_hard_constraints(new_timetable, self.timetable_specs)
-		if calcul_nou != 0:
-			# print("do i everrr??????????")
-			# print("END -----------------------------------------------------------\n")
-			return None
-		# print("END -----------------------------------------------------------\n")
-
-		return State(self.timetable_specs, self.constraints, new_timetable)
+		# calcul_nou = check_hard_constraints(new_timetable, self.timetable_specs)
+		# if calcul_nou != 0:
+		# 	print("\nnu e bun")
+		# 	print("S a facut schimbul intre urmatoarele:")
+		# 	print(first_value, info_first_class)
+		# 	print(second_value, info_second_class)
+		# 	# print(day, interval, new_day, new_interval)		
+		# 	exit(1)
+		return State(self.timetable_specs, self.constraints, new_timetable, orar_profesori=new_orar_profesori)
 
 	def __str__(self) -> str:
 		return str(self.timetable)
@@ -272,7 +277,8 @@ class State:
 		print(self)
 
 	def clone(self) -> State:
-		return State(self.timetable_specs, self.constraints, copy.deepcopy(self.timetable))
+		return State(self.timetable_specs, self.constraints, copy.deepcopy(self.timetable), \
+			   		 orar_profesori=copy.deepcopy(self.orar_profesori))
 
 def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State]:
 	iters = 0
@@ -281,15 +287,14 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 	while iters < max_iters:
 		# conflicte_curente = check_soft_constraints(state.timetable, state.timetable_specs)
-		print("iter = ", iters)
+		# print("iter = ", iters)
 
-		# print("State ul curent are ", state.soft_conflicts, " soft conflicts")
+		print("State ul curent are ", state.soft_conflicts, " soft conflicts")
 		if state.soft_conflicts == 0:
 			return True, iters, state
 
 		iters += 1
-		# best_neighbor = state.get_best_neigh()
-		best_neighbor = state.get_bestttttt()
+		best_neighbor = state.get_best_neigh()
 		if best_neighbor == None:
 			# print("nu am stare mai buna... tre sa dau restart")
 			break
@@ -301,7 +306,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 def random_restart_hill_climbing(
 	initial: State,
-	max_restarts: int = 10,
+	max_restarts: int = 30,
 	run_max_iters: int = 100,
 ) -> tuple[bool, int, State]:
 
@@ -319,18 +324,18 @@ def random_restart_hill_climbing(
 
 		current_restarts += 1
 		# print("nu merge, dau restart")
+		print("restart ", current_restarts)
 		state = State(state.timetable_specs)
 		# print("new initial state: ", state.get_soft_conflicts())
-		print("restart ", current_restarts)
 		# print("-----------------------")
 
 	return is_final, total_iters, state
 
 if __name__ == '__main__':
-	# filename = f'inputs/dummy.yaml'
+	filename = f'inputs/dummy.yaml'
 	# filename = f'inputs/orar_mic_exact.yaml'
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
-	filename = f'inputs/orar_mare_relaxat.yaml'
+	# filename = f'inputs/orar_mare_relaxat.yaml'
 	# filename = f'inputs/orar_bonus_exact.yaml'
 	# filename = f'inputs/orar_constrans_incalcat.yaml'
 	print("Fisierul de input: ", filename)
