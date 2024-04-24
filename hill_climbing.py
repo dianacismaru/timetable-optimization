@@ -29,15 +29,16 @@ class State:
 		self.soft_conflicts = soft_conflicts if soft_conflicts is not None \
 			else self.get_soft_conflicts()
 		
-		tries = 0
-		while self.hard_conflicts > 0 and tries < 1000:
-			self.orar_profesori, self.timetable = self.generate_timetable()
-			self.hard_conflicts = self.get_hard_conflicts()
-			tries += 1
-		
+		if self.hard_conflicts == 0:
+			tries = 0
+			while self.hard_conflicts > 0 and tries < 1000:
+				self.orar_profesori, self.timetable = self.generate_timetable()
+				self.hard_conflicts = self.get_hard_conflicts()
+				tries += 1
+
+			self.soft_conflicts = self.get_soft_conflicts()
+
 	def set_constraints(self, timetable_specs):
-		# for prof in timetable_specs[PROFESORI]:
-			# print(timetable_specs[PROFESORI][prof][CONSTRANGERI])
 		"""
 		constraints:
 			DS:
@@ -84,7 +85,7 @@ class State:
 
 			for slot in self.timetable_specs[INTERVALE]:
 				timetable[day][slot] = {}
-				mini_timetable[day][slot] = 0 # POSIBIL SA TREBUIASCA MATERIA SI SALA! or not..
+				mini_timetable[day][slot] = 0
 				teacher_busy_slots[(day, slot)] = []
 
 				for classroom in self.timetable_specs[CLASSROOMS]:
@@ -99,9 +100,7 @@ class State:
 		for teacher in self.timetable_specs[TEACHERS]:
 			courses_count[teacher] = 0
 			orar_profesori[teacher] = copy.deepcopy(mini_timetable)
-			# print("Profesorul ", teacher, " are orarul:", orar_profesori[teacher])
 
-			# orar_profesori[teacher] = {}
 		bad_solution = False
 		for subject, infos in self.constraints.items():
 			if bad_solution:
@@ -149,7 +148,6 @@ class State:
 		return orar_profesori, timetable
 
 	def get_hard_conflicts(self) -> int:
-		# return self.hard_conflicts
 		return check_hard_constraints(self.timetable, self.timetable_specs)
 	
 	def get_soft_conflicts(self) -> int:
@@ -158,7 +156,7 @@ class State:
 	def is_final(self) -> bool:
 		return self.soft_conflicts == 0 and self.hard_conflicts == 0
  	
-	def get_best_neigh(self) -> State:
+	def get_best_neigh(self) -> tuple[State, int]:
 		best_neighbor = None
 		curr_soft_conflicts = self.soft_conflicts
 		days = list(self.timetable.keys())
@@ -167,6 +165,7 @@ class State:
 		num_days = len(days)
 		num_intervals = len(intervals)
 		num_classrooms = len(classrooms)
+		states_created = 0
 
 		for i in range(num_days):
 			day = days[i]
@@ -185,13 +184,14 @@ class State:
 														new_day, new_interval, new_classroom)
 								
 								if new_state is not None:
+									states_created += 1
 									next_state_soft_conflicts = new_state.soft_conflicts
 									if next_state_soft_conflicts < curr_soft_conflicts:
 										curr_soft_conflicts = next_state_soft_conflicts
 										best_neighbor = new_state
 										if next_state_soft_conflicts == 0:
-											return best_neighbor
-		return best_neighbor
+											return best_neighbor, states_created
+		return best_neighbor, states_created
 
 	def generate_successor(self, day: str, interval: tuple[int, int], classroom: str, \
 					   new_day: str, new_interval: tuple[int, int], new_classroom: str) -> State:
@@ -260,15 +260,8 @@ class State:
 		new_timetable[day][interval][classroom], new_timetable[new_day][new_interval][new_classroom] = \
 			second_value, first_value
 		
-		# calcul_nou = check_hard_constraints(new_timetable, self.timetable_specs)
-		# if calcul_nou != 0:
-		# 	print("\nnu e bun")
-		# 	print("S a facut schimbul intre urmatoarele:")
-		# 	print(first_value, info_first_class)
-		# 	print(second_value, info_second_class)
-		# 	# print(day, interval, new_day, new_interval)		
-		# 	exit(1)
-		return State(self.timetable_specs, self.constraints, new_timetable, orar_profesori=new_orar_profesori)
+		return State(self.timetable_specs, self.constraints, new_timetable, \
+			   		 hard_conflicts=self.hard_conflicts, orar_profesori=new_orar_profesori)
 
 	def __str__(self) -> str:
 		return str(self.timetable)
@@ -280,56 +273,52 @@ class State:
 		return State(self.timetable_specs, self.constraints, copy.deepcopy(self.timetable), \
 			   		 orar_profesori=copy.deepcopy(self.orar_profesori))
 
-def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State]:
-	iters = 0
+def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State, int]:
+	iters, total_states = 0, 0
 	state = initial.clone()
-	# print("am clonat starea initiala in hc")
 
 	while iters < max_iters:
-		# conflicte_curente = check_soft_constraints(state.timetable, state.timetable_specs)
-		# print("iter = ", iters)
-
-		print("State ul curent are ", state.soft_conflicts, " soft conflicts")
+		print(iters)
+		# print("State ul curent are ", state.soft_conflicts, " soft conflicts")
 		if state.soft_conflicts == 0:
-			return True, iters, state
+			return True, iters, state, total_states
 
 		iters += 1
-		best_neighbor = state.get_best_neigh()
+		best_neighbor, states = state.get_best_neigh()
+		total_states += states
+
 		if best_neighbor == None:
-			# print("nu am stare mai buna... tre sa dau restart")
 			break
 
-		# print("best neigh are ", best_neighbor.get_soft_conflicts(), " soft conflicts\n")
 		state = best_neighbor.clone()
 
-	return state.is_final(), iters, state
+	return state.is_final(), iters, state, total_states
 
 def random_restart_hill_climbing(
 	initial: State,
 	max_restarts: int = 30,
 	run_max_iters: int = 100,
-) -> tuple[bool, int, State]:
+) -> tuple[bool, int, State, int]:
 
-	total_iters = 0
+	total_iters, total_states = 0, 0
 	current_restarts = 0
 	is_final = False
 	state = initial
 
 	while current_restarts <= max_restarts:
-		is_final, new_iters, state = hill_climbing(state, run_max_iters)
+		is_final, new_iters, state, states = hill_climbing(state, run_max_iters)
 		total_iters += new_iters
+		total_states += states
 
 		if is_final:
 			break
 
+		print("Am ajuns la ", state.soft_conflicts, " soft conflicts")
 		current_restarts += 1
-		# print("nu merge, dau restart")
 		print("restart ", current_restarts)
 		state = State(state.timetable_specs)
-		# print("new initial state: ", state.get_soft_conflicts())
-		# print("-----------------------")
 
-	return is_final, total_iters, state
+	return is_final, total_iters, state, total_states
 
 if __name__ == '__main__':
 	filename = f'inputs/dummy.yaml'
@@ -337,7 +326,7 @@ if __name__ == '__main__':
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
 	# filename = f'inputs/orar_mare_relaxat.yaml'
 	# filename = f'inputs/orar_bonus_exact.yaml'
-	# filename = f'inputs/orar_constrans_incalcat.yaml'
+	filename = f'inputs/orar_constrans_incalcat.yaml'
 	print("Fisierul de input: ", filename)
 
 	timetable_specs = read_yaml_file(filename)
@@ -350,14 +339,14 @@ if __name__ == '__main__':
 	# print("Conflicte soft inainte: ", timetable.get_soft_conflicts())
 	# print("Start cautari..................")
 	
-	# measure execution time
 	import time
 	start_time = time.time()
-	final, iters, timetable = random_restart_hill_climbing(timetable)
+	final, iters, timetable, states = random_restart_hill_climbing(timetable)
+	end_time = time.time()
 
 	print("Am ajuns in stare finala? ", final)
 	print("dupa ", iters, " iteratii")
-	end_time = time.time()
+	print("Am facut ", states, " stari")
 	print("Execution time: ", end_time - start_time)
 
 	import json
