@@ -28,18 +28,11 @@ class State:
 			else self.get_soft_conflicts()
 		
 		tries = 0
-		# print("conflictele hard: ", self.hard_conflicts, " soft, ", self.soft_conflicts)
-		
 		while self.hard_conflicts > 0 and tries < 1000:
-			# print("in momentul asta am ", self.hard_conflicts, " hard conflicts si ", self.soft_conflicts, " soft conflicts")
 			self.timetable = self.generate_timetable()
-			# print("tocmai am generat un nou orar")
 			self.hard_conflicts = self.get_hard_conflicts()
-			# self.soft_conflicts = self.get_soft_conflicts()
 			tries += 1
 		
-		# print("got it in ", tries, " tries\n")
-
 	def set_constraints(self, timetable_specs):
 		# for prof in timetable_specs[PROFESORI]:
 			# print(timetable_specs[PROFESORI][prof][CONSTRANGERI])
@@ -63,7 +56,6 @@ class State:
 			constraints[subject] = {}
 			constraints[subject][STUD_CT] = timetable_specs[SUBJECTS][subject]
 			constraints[subject][CLASSROOMS] = []
-			# constraints[subject][TEACHERS] = set()
 			constraints[subject][TEACHERS] = []
 
 		for classroom, info in timetable_specs[CLASSROOMS].items():
@@ -72,15 +64,12 @@ class State:
 
 		for teacher, info in timetable_specs[TEACHERS].items():
 			for subject in info[SUBJECTS]:
-				# constraints[subject][TEACHERS].add(teacher)
 				constraints[subject][TEACHERS].append(teacher)
 
 		constraints = dict(sorted(constraints.items(), key=lambda x: len(x[1][TEACHERS]), reverse=True))
-		# print(constraints)
 		return constraints
 
 	def generate_timetable(self) -> dict:
-		# print("se genereaza..")
 		courses_count = {}
 		for teacher in self.timetable_specs[TEACHERS]:
 			courses_count[teacher] = 0
@@ -94,7 +83,6 @@ class State:
 
 			for slot in self.timetable_specs[INTERVALE]:
 				timetable[day][slot] = {}
-				# teacher_busy_slots[(day, slot)] = set()
 				teacher_busy_slots[(day, slot)] = []
 
 				for classroom in self.timetable_specs[CLASSROOMS]:
@@ -102,9 +90,7 @@ class State:
 
 					if classroom not in free_slots:
 						free_slots[classroom] = []
-						# free_slots[classroom] = set()
 
-					# free_slots[classroom].add((day, slot))
 					free_slots[classroom].append((day, slot))
 
 		bad_solution = False
@@ -116,9 +102,6 @@ class State:
 			while students_left > 0:
 				classroom, capacity = random.choice(infos[CLASSROOMS])
 
-				# if (free_slots[classroom] == set()):
-				# 	bad_solution = True
-				# 	break
 				if free_slots[classroom] == []:
 					bad_solution = True
 					break
@@ -127,11 +110,7 @@ class State:
 				random_slot = random.choice(free_slots[classroom])
 				free_slots[classroom].remove(random_slot)
 				(day, slot) = random_slot
-				# candidates = infos[TEACHERS] - teacher_busy_slots[(day, slot)]
-				# if (candidates == set()):
-					# bad_solution = True
-					# break
-	 			#filter candidates
+
 				candidates = list(filter(lambda x: x not in teacher_busy_slots[(day, slot)], infos[TEACHERS]))
 				if not candidates:
 					bad_solution = True
@@ -140,13 +119,6 @@ class State:
 				found_candidate = False
 				teacher = None
 				tries = 0
-				# while not found_candidate and tries < 10:
-				# 	tries += 1
-				# 	teacher = candidates.pop()
-				# 	if courses_count[teacher] < 7:
-				# 		found_candidate = True
-				# 	else:
-				# 		candidates.add(teacher)
 				while not found_candidate and tries < 10:
 					tries += 1
 					teacher = candidates[random.randint(0, len(candidates) - 1)]
@@ -158,33 +130,13 @@ class State:
 					bad_solution = True
 					break
 
-				# teacher_busy_slots[(day, slot)].add(teacher)
 				teacher_busy_slots[(day, slot)].append(teacher)
 	
 				courses_count[teacher] += 1
 				timetable[day][slot][classroom] = (teacher, subject)
 				students_left -= capacity
 
-		# print(timetable)
 		return timetable
-
-	@staticmethod
-	def __compute_soft_conflicts(timetable, timetable_specs) -> int:
-		import sys
-		stdout = sys.stdout
-		sys.stdout = open('/dev/null', 'w')
-		constraints = check_soft_constraints(timetable, timetable_specs)
-		sys.stdout = stdout
-		return constraints
-
-	@staticmethod
-	def __compute_hard_conflicts(timetable, timetable_specs) -> int:
-		import sys
-		stdout = sys.stdout
-		sys.stdout = open('/dev/null', 'w')
-		constraints = check_hard_constraints(timetable, timetable_specs)
-		sys.stdout = stdout
-		return constraints
 
 	def get_hard_conflicts(self) -> int:
 		# return self.hard_conflicts
@@ -194,39 +146,75 @@ class State:
 		return check_soft_constraints(self.timetable, self.timetable_specs)
 
 	def is_final(self) -> bool:
-		return self.get_soft_conflicts() == 0 and self.get_hard_conflicts() == 0
+		return self.soft_conflicts == 0 and self.hard_conflicts == 0
  
 	def get_best_neigh(self) -> State:
-		i = 0
+		# i = 0
 		best_neighbor = None
-		current_state_soft_conflicts = self.soft_conflicts
+		curr_soft_conflicts = self.soft_conflicts
 
 		for day, day_values in self.timetable.items():
 			for interval, interval_values in day_values.items():
-				for classroom, classroom_value in interval_values.items():
+				for classroom, _ in interval_values.items():
 					for new_day, new_day_values in self.timetable.items():
 						for new_interval, new_interval_values in new_day_values.items():
-							for new_classroom, new_classroom_value in new_interval_values.items():
-								new_state = self.get_next_state(day, interval, classroom, new_day, \
-																new_interval, new_classroom)
+							for new_classroom, _ in new_interval_values.items():
+								new_state = self.generate_successor(day, interval, classroom, \
+														new_day, new_interval, new_classroom)
 								
 								if new_state is not None:
 									next_state_soft_conflicts = new_state.soft_conflicts
-									if next_state_soft_conflicts < current_state_soft_conflicts:
+									if next_state_soft_conflicts < curr_soft_conflicts:
 										# print("vecinul i = ", i, " are ", next_state_soft_conflicts, " soft uri")
-										current_state_soft_conflicts = next_state_soft_conflicts
+										curr_soft_conflicts = next_state_soft_conflicts
 										best_neighbor = new_state
 										if next_state_soft_conflicts == 0:
 											return best_neighbor
-										i += 1
+										# i += 1
 
 		return best_neighbor
+	
+	def get_bestttttt(self) -> State:
+		best_neighbor = None
+		curr_soft_conflicts = self.soft_conflicts
+		days = list(self.timetable.keys())
+		intervals = list(self.timetable[days[0]].keys())
+		classrooms = list(self.timetable[days[0]][intervals[0]].keys())
+		num_days = len(days)
+		num_intervals = len(intervals)
+		num_classrooms = len(classrooms)
 
-	def get_next_state(self, day: str, interval: tuple[int, int], classroom: str, \
+		for i in range(num_days):
+			day = days[i]
+			for j in range(num_intervals):
+				interval = intervals[j]
+				for k in range(num_classrooms):
+					classroom = classrooms[k]
+					for x in range(i, num_days):
+						new_day = days[x]
+						for y in range(num_intervals):
+							new_interval = intervals[y]
+							for z in range(num_classrooms):
+								new_classroom = classrooms[z]
+								# print(day, interval, classroom, new_day, new_interval, new_classroom)
+								new_state = self.generate_successor(day, interval, classroom, \
+														new_day, new_interval, new_classroom)
+								
+								if new_state is not None:
+									next_state_soft_conflicts = new_state.soft_conflicts
+									if next_state_soft_conflicts < curr_soft_conflicts:
+										curr_soft_conflicts = next_state_soft_conflicts
+										best_neighbor = new_state
+										if next_state_soft_conflicts == 0:
+											return best_neighbor
+		return best_neighbor
+
+	def generate_successor(self, day: str, interval: tuple[int, int], classroom: str, \
 					   new_day: str, new_interval: tuple[int, int], new_classroom: str) -> State:
 		first_value = self.timetable[day][interval][classroom]
 		second_value = self.timetable[new_day][new_interval][new_classroom]
 
+		# print(first_value, second_value)
 		# nu are rost sa intershimb daca ambele sunt None
 		if first_value is None and second_value is None:
 			return None
@@ -237,29 +225,43 @@ class State:
 		
 		# trebuie sa verific daca clasele sunt compatibile dpdv al capacitatii si al materiilor predate
 		# daca sunt compatibile, atunci facem schimbul
-		info_first = self.timetable_specs[CLASSROOMS][classroom]
-		info_second = self.timetable_specs[CLASSROOMS][new_classroom]
+		info_first_class = self.timetable_specs[CLASSROOMS][classroom]
+		info_second_class = self.timetable_specs[CLASSROOMS][new_classroom]
 
 		if first_value is not None:
-			if first_value[1] not in info_second[SUBJECTS]:
+			if first_value[1] not in info_second_class[SUBJECTS]:
 				return None
 			
 		if second_value is not None:
-			if second_value[1] not in info_first[SUBJECTS]:
+			if second_value[1] not in info_first_class[SUBJECTS]:
 				return None
 		
 		# verific ca au si capacitatile egale
 		if first_value is not None and second_value is not None:
-			if info_first[CAPACITY] != info_second[CAPACITY]:
+			if info_first_class[CAPACITY] != info_second_class[CAPACITY]:
 				return None
 			
+			info_first_subject = self.timetable_specs[TEACHERS][first_value[0]][SUBJECTS]
+			info_second_subject = self.timetable_specs[TEACHERS][second_value[0]][SUBJECTS]
+			# print(info_first_subject, info_second_subject)
+			# print(first_value[1], second_value[1])
+			# print("\n")
+			if first_value[1] not in info_second_subject \
+				or second_value[1] not in info_first_subject:
+				return None
+		
+		
 		new_timetable = copy.deepcopy(self.timetable)
 		new_timetable[day][interval][classroom], new_timetable[new_day][new_interval][new_classroom] = \
 			second_value, first_value
-		 
-		calcul_nou = State.__compute_hard_conflicts(new_timetable, self.timetable_specs)
+		
+		# print("\nACUM -----------------------------------------------------------")
+		calcul_nou = check_hard_constraints(new_timetable, self.timetable_specs)
 		if calcul_nou != 0:
+			# print("do i everrr??????????")
+			# print("END -----------------------------------------------------------\n")
 			return None
+		# print("END -----------------------------------------------------------\n")
 
 		return State(self.timetable_specs, self.constraints, new_timetable)
 
@@ -281,12 +283,13 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 		# conflicte_curente = check_soft_constraints(state.timetable, state.timetable_specs)
 		print("iter = ", iters)
 
-		# print("State ul curent are ", conflicte_curente, " soft conflicts")
+		# print("State ul curent are ", state.soft_conflicts, " soft conflicts")
 		if state.soft_conflicts == 0:
 			return True, iters, state
 
 		iters += 1
-		best_neighbor = state.get_best_neigh()
+		# best_neighbor = state.get_best_neigh()
+		best_neighbor = state.get_bestttttt()
 		if best_neighbor == None:
 			# print("nu am stare mai buna... tre sa dau restart")
 			break
@@ -298,7 +301,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 def random_restart_hill_climbing(
 	initial: State,
-	max_restarts: int = 30,
+	max_restarts: int = 10,
 	run_max_iters: int = 100,
 ) -> tuple[bool, int, State]:
 
@@ -318,18 +321,19 @@ def random_restart_hill_climbing(
 		# print("nu merge, dau restart")
 		state = State(state.timetable_specs)
 		# print("new initial state: ", state.get_soft_conflicts())
-		# print("restart ", current_restarts)
+		print("restart ", current_restarts)
 		# print("-----------------------")
 
 	return is_final, total_iters, state
 
 if __name__ == '__main__':
 	# filename = f'inputs/dummy.yaml'
-	filename = f'inputs/orar_mic_exact.yaml'
+	# filename = f'inputs/orar_mic_exact.yaml'
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
-	# filename = f'inputs/orar_mare_relaxat.yaml'
+	filename = f'inputs/orar_mare_relaxat.yaml'
 	# filename = f'inputs/orar_bonus_exact.yaml'
 	# filename = f'inputs/orar_constrans_incalcat.yaml'
+	print("Fisierul de input: ", filename)
 
 	timetable_specs = read_yaml_file(filename)
 	timetable = State(timetable_specs)
