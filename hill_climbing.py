@@ -16,15 +16,15 @@ class State:
 		timetable : dict | None = None,
 		hard_conflicts: int | None = None,
 		soft_conflicts: int | None = None,
-		orar_profesori: dict | None = None
+		teacher_schedule: dict | None = None
 	) -> None:
 
 		self.timetable_specs = timetable_specs
 		self.teacher_constraints = teacher_constraints
 		self.subject_info = subject_info
 
-		(self.orar_profesori, self.timetable) = (orar_profesori, timetable) \
-			if orar_profesori is not None and timetable is not None \
+		(self.teacher_schedule, self.timetable) = (teacher_schedule, timetable) \
+			if teacher_schedule is not None and timetable is not None \
 			else self.generate_timetable()
 		self.hard_conflicts = hard_conflicts if hard_conflicts is not None \
 			else self.get_hard_conflicts()
@@ -34,14 +34,14 @@ class State:
 		if self.hard_conflicts == 0:
 			tries = 0
 			while self.hard_conflicts > 0 and tries < 1000:
-				self.orar_profesori, self.timetable = self.generate_timetable()
+				self.teacher_schedule, self.timetable = self.generate_timetable()
 				self.hard_conflicts = self.get_hard_conflicts()
 				tries += 1
 
 			self.soft_conflicts = self.get_soft_conflicts()
 
 	def generate_timetable(self) -> tuple[dict, dict]:
-		orar_profesori = {}
+		teacher_schedule = {}
 		free_slots = {}
 		timetable = {}
 		mini_timetable = {}
@@ -67,7 +67,7 @@ class State:
 		courses_count = {}
 		for teacher in self.timetable_specs[TEACHERS]:
 			courses_count[teacher] = 0
-			orar_profesori[teacher] = copy.deepcopy(mini_timetable)
+			teacher_schedule[teacher] = copy.deepcopy(mini_timetable)
 
 		bad_solution = False
 		for subject, infos in self.subject_info.items():
@@ -82,7 +82,6 @@ class State:
 					bad_solution = True
 					break
 
-				# (day, slot) = free_slots[classroom].pop()
 				random_slot = random.choice(free_slots[classroom])
 				free_slots[classroom].remove(random_slot)
 				(day, slot) = random_slot
@@ -108,18 +107,18 @@ class State:
 					break
 
 				teacher_busy_slots[(day, slot)].append(teacher)
-				orar_profesori[teacher][day][slot] += 1
+				teacher_schedule[teacher][day][slot] += 1
 				courses_count[teacher] += 1
 				timetable[day][slot][classroom] = (teacher, subject)
 				students_left -= capacity
 
-		return orar_profesori, timetable
+		return teacher_schedule, timetable
 
 	def get_hard_conflicts(self) -> int:
 		return check_hard_constraints(self.timetable, self.timetable_specs)
 	
 	def get_soft_conflicts(self) -> int:
-		return check_soft_constraints(self.timetable, self.teacher_constraints, self.orar_profesori)
+		return check_soft_constraints(self.timetable, self.teacher_constraints, self.teacher_schedule)
 
 	def is_final(self) -> bool:
 		return self.soft_conflicts == 0 and self.hard_conflicts == 0
@@ -216,22 +215,22 @@ class State:
 				return None
 			
 			# trebuie sa verific ca intervalele profesorilor nu sunt deja ocupate
-			if self.orar_profesori[first_value[0]][new_day][new_interval] > 0 \
-				or self.orar_profesori[second_value[0]][day][interval] > 0:
+			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0 \
+				or self.teacher_schedule[second_value[0]][day][interval] > 0:
 				return None
 			
 		new_timetable = copy.deepcopy(self.timetable)
-		new_orar_profesori = copy.deepcopy(self.orar_profesori)
+		new_orar_profesori = copy.deepcopy(self.teacher_schedule)
 
 		if first_value is not None:
-			if self.orar_profesori[first_value[0]][new_day][new_interval] > 0:
+			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0:
 				return None
 			
 			new_orar_profesori[first_value[0]][new_day][new_interval] += 1
 			new_orar_profesori[first_value[0]][day][interval] = 0
 
 		if second_value is not None:
-			if self.orar_profesori[second_value[0]][day][interval] > 0:
+			if self.teacher_schedule[second_value[0]][day][interval] > 0:
 				return None
 			
 			new_orar_profesori[second_value[0]][day][interval] += 1
@@ -241,7 +240,7 @@ class State:
 			second_value, first_value
 		
 		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, new_timetable, \
-			   		 hard_conflicts=self.hard_conflicts, orar_profesori=new_orar_profesori)
+			   		 hard_conflicts=self.hard_conflicts, teacher_schedule=new_orar_profesori)
 
 	def __str__(self) -> str:
 		return str(self.timetable)
@@ -251,7 +250,7 @@ class State:
 
 	def clone(self) -> State:
 		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, copy.deepcopy(self.timetable), \
-			   		 orar_profesori=copy.deepcopy(self.orar_profesori))
+			   		 teacher_schedule=copy.deepcopy(self.teacher_schedule))
 
 def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State, int]:
 	iters, total_states = 0, 0
@@ -316,7 +315,7 @@ if __name__ == '__main__':
 	# print(teacher_constraints)
 	timetable = State(timetable_specs, teacher_constraints, subject_info)
 
-	# print(timetable.orar_profesori)
+	# print(timetable.teacher_schedule)
 	# print(timetable.timetable)
 	# Debug code:
 	# --------------------------------------
@@ -340,5 +339,5 @@ if __name__ == '__main__':
 		json.dump(timetable.timetable, file, indent=4)
 
 	with open('orar_profi.json', 'w') as file:
-		json.dump(timetable.orar_profesori, file, indent=4)
+		json.dump(timetable.teacher_schedule, file, indent=4)
 	# --------------------------------------
