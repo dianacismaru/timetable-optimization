@@ -1,17 +1,18 @@
 from __future__ import annotations
 import copy
 from utils import *
-# from check_constraints import *
 from helper import *
 
 import random
-random.seed(random.random())
+# random.seed(random.random())
+random.seed(2)
 
 class State:
 	def __init__(
 		self,
 		timetable_specs : dict,
-		constraints : dict | None = None,
+		teacher_constraints: dict,
+		subject_info : dict,
 		timetable : dict | None = None,
 		hard_conflicts: int | None = None,
 		soft_conflicts: int | None = None,
@@ -19,8 +20,9 @@ class State:
 	) -> None:
 
 		self.timetable_specs = timetable_specs
-		self.constraints = constraints if constraints is not None \
-			else self.set_constraints(timetable_specs)
+		self.teacher_constraints = teacher_constraints
+		self.subject_info = subject_info
+
 		(self.orar_profesori, self.timetable) = (orar_profesori, timetable) \
 			if orar_profesori is not None and timetable is not None \
 			else self.generate_timetable()
@@ -37,40 +39,6 @@ class State:
 				tries += 1
 
 			self.soft_conflicts = self.get_soft_conflicts()
-
-	def set_constraints(self, timetable_specs):
-		"""
-		constraints:
-			DS:
-				STUD_CT: 100
-				CLASSROOMS: [EG390]
-				TEACHERS: [RG, EG, CD, AD]
-			MS:
-				STUD_CT: 100
-				CLASSROOMS: [EG324]
-				TEACHERS: [CD, RG]
-			IA:
-				STUD_CT: 75
-				CLASSROOMS: [EG324]
-				TEACHERS: [PF, AD]
-		"""
-		constraints = {}
-		for subject in timetable_specs[SUBJECTS]:
-			constraints[subject] = {}
-			constraints[subject][STUD_CT] = timetable_specs[SUBJECTS][subject]
-			constraints[subject][CLASSROOMS] = []
-			constraints[subject][TEACHERS] = []
-
-		for classroom, info in timetable_specs[CLASSROOMS].items():
-			for subject in info[SUBJECTS]:
-				constraints[subject][CLASSROOMS].append((classroom, info[CAPACITY]))
-
-		for teacher, info in timetable_specs[TEACHERS].items():
-			for subject in info[SUBJECTS]:
-				constraints[subject][TEACHERS].append(teacher)
-
-		constraints = dict(sorted(constraints.items(), key=lambda x: len(x[1][TEACHERS]), reverse=True))
-		return constraints
 
 	def generate_timetable(self) -> tuple[dict, dict]:
 		orar_profesori = {}
@@ -102,7 +70,7 @@ class State:
 			orar_profesori[teacher] = copy.deepcopy(mini_timetable)
 
 		bad_solution = False
-		for subject, infos in self.constraints.items():
+		for subject, infos in self.subject_info.items():
 			if bad_solution:
 				break
 
@@ -151,7 +119,7 @@ class State:
 		return check_hard_constraints(self.timetable, self.timetable_specs)
 	
 	def get_soft_conflicts(self) -> int:
-		return check_soft_constraints(self.timetable, self.timetable_specs)
+		return check_soft_constraints(self.timetable, self.teacher_constraints, self.orar_profesori)
 
 	def is_final(self) -> bool:
 		return self.soft_conflicts == 0 and self.hard_conflicts == 0
@@ -260,7 +228,7 @@ class State:
 		new_timetable[day][interval][classroom], new_timetable[new_day][new_interval][new_classroom] = \
 			second_value, first_value
 		
-		return State(self.timetable_specs, self.constraints, new_timetable, \
+		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, new_timetable, \
 			   		 hard_conflicts=self.hard_conflicts, orar_profesori=new_orar_profesori)
 
 	def __str__(self) -> str:
@@ -270,7 +238,7 @@ class State:
 		print(self)
 
 	def clone(self) -> State:
-		return State(self.timetable_specs, self.constraints, copy.deepcopy(self.timetable), \
+		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, copy.deepcopy(self.timetable), \
 			   		 orar_profesori=copy.deepcopy(self.orar_profesori))
 
 def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State, int]:
@@ -278,8 +246,8 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 	state = initial.clone()
 
 	while iters < max_iters:
-		print(iters)
-		# print("State ul curent are ", state.soft_conflicts, " soft conflicts")
+		# print(iters)
+		print("State ul curent are ", state.soft_conflicts, " soft conflicts")
 		if state.soft_conflicts == 0:
 			return True, iters, state, total_states
 
@@ -296,7 +264,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 def random_restart_hill_climbing(
 	initial: State,
-	max_restarts: int = 30,
+	max_restarts: int = 2,
 	run_max_iters: int = 100,
 ) -> tuple[bool, int, State, int]:
 
@@ -316,7 +284,7 @@ def random_restart_hill_climbing(
 		print("Am ajuns la ", state.soft_conflicts, " soft conflicts")
 		current_restarts += 1
 		print("restart ", current_restarts)
-		state = State(state.timetable_specs)
+		state = State(state.timetable_specs, state.teacher_constraints, state.subject_info)
 
 	return is_final, total_iters, state, total_states
 
@@ -326,18 +294,23 @@ if __name__ == '__main__':
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
 	# filename = f'inputs/orar_mare_relaxat.yaml'
 	# filename = f'inputs/orar_bonus_exact.yaml'
-	filename = f'inputs/orar_constrans_incalcat.yaml'
+	# filename = f'inputs/orar_constrans_incalcat.yaml'
 	print("Fisierul de input: ", filename)
 
 	timetable_specs = read_yaml_file(filename)
-	timetable = State(timetable_specs)
+	teacher_constraints = get_teacher_constraints(timetable_specs)
+	subject_info = get_subject_info(timetable_specs)
 
+	# print(teacher_constraints)
+	timetable = State(timetable_specs, teacher_constraints, subject_info)
+
+	# print(timetable.orar_profesori)
 	# print(timetable.timetable)
 	# Debug code:
 	# --------------------------------------
 
-	# print("Conflicte soft inainte: ", timetable.get_soft_conflicts())
-	# print("Start cautari..................")
+	print("Conflicte soft inainte: ", timetable.get_soft_conflicts())
+	print("Start cautari..................")
 	
 	import time
 	start_time = time.time()
@@ -346,11 +319,14 @@ if __name__ == '__main__':
 
 	print("Am ajuns in stare finala? ", final)
 	print("dupa ", iters, " iteratii")
-	print("Am facut ", states, " stari")
+	# print("Am facut ", states, " stari")
 	print("Execution time: ", end_time - start_time)
 
 	import json
 	filename = 'my_output.json'
 	with open(filename, 'w') as file:
 		json.dump(timetable.timetable, file, indent=4)
+
+	with open('orar_profi.json', 'w') as file:
+		json.dump(timetable.orar_profesori, file, indent=4)
 	# --------------------------------------
