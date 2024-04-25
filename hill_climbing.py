@@ -186,8 +186,20 @@ class State:
 			if first_value[1] not in info_second_class[SUBJECTS]:
 				return None
 			
+			if new_day in self.teacher_constraints[first_value[0]][DAYS]:
+				return None
+			
+			if new_interval in self.teacher_constraints[first_value[0]][INTERVALS]:
+				return None
+			
 		if second_value is not None:
 			if second_value[1] not in info_first_class[SUBJECTS]:
+				return None
+			
+			if day in self.teacher_constraints[second_value[0]][DAYS]:
+				return None
+			
+			if interval in self.teacher_constraints[second_value[0]][INTERVALS]:
 				return None
 
 		# verific ca au si capacitatile egale
@@ -264,7 +276,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 def random_restart_hill_climbing(
 	initial: State,
-	max_restarts: int = 2,
+	max_restarts: int = 30,
 	run_max_iters: int = 100,
 ) -> tuple[bool, int, State, int]:
 

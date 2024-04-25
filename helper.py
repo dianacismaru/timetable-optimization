@@ -151,6 +151,7 @@ def get_breaks(lst) -> list[int]:
 
 def check_soft_constraints(timetable : dict, teacher_constraints: dict, orar_profesori : dict):
 	violated_constr = 0
+	# print()
 	# cred ca pot face si pe dos, sa parcurg toate zilele, intervalele pt toti profesorii
 	# si daca valoarea e > 1 si e in teacher_constraints, atunci e violata
 	# astfel pot sa retin si intervalele de pauza
@@ -159,11 +160,11 @@ def check_soft_constraints(timetable : dict, teacher_constraints: dict, orar_pro
 			for interval in timetable[day]:
 				if orar_profesori[teacher][day][interval] > 0:
 					if day in teacher_constraints[teacher][DAYS]:
-						# print(f'Profesorul {teacher} nu dorește să predea în ziua {day}!')
+						print(f'Profesorul {teacher} nu dorește să predea în ziua {day}!')
 						violated_constr += 1
 
 					if interval in teacher_constraints[teacher][INTERVALS]:
-						# print(f'Profesorul {teacher} nu dorește să predea în intervalul {interval}!')
+						print(f'Profesorul {teacher} nu dorește să predea în intervalul {interval}!')
 						violated_constr += 1
 			
 			if teacher_constraints[teacher][BREAK] is not None:
