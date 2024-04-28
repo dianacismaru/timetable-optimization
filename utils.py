@@ -1,13 +1,15 @@
 import yaml
-import argparse
-import sys
 
 ##################### MACROURI #####################
-INTERVALE = 'Intervale'
-ZILE = 'Zile'
-MATERII = 'Materii'
-PROFESORI = 'Profesori'
-SALI = 'Sali'
+INTERVALS = 'Intervale'
+DAYS = 'Zile'
+SUBJECTS = 'Materii'
+TEACHERS = 'Profesori'
+CLASSROOMS = 'Sali'
+CONSTRAINTS = 'Constrangeri'
+CAPACITY = 'Capacitate'
+STUD_CT = 'Stud_ct'
+BREAK = 'Pauza'
 
 def read_yaml_file(file_path : str) -> dict:
     '''
@@ -15,25 +17,6 @@ def read_yaml_file(file_path : str) -> dict:
     '''
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
-
-
-def acces_yaml_attributes(yaml_dict : dict):
-    '''
-    Primește un dicționar yaml și afișează datele referitoare la atributele sale
-    '''
-
-    print('Zilele din orar sunt:', yaml_dict[ZILE])
-    print()
-    print('Intervalele orarului sunt:', yaml_dict[INTERVALE])
-    print()
-    print('Materiile sunt:', yaml_dict[MATERII])
-    print()
-    print('Profesorii sunt:', end=' ')
-    print(*list(yaml_dict[PROFESORI].keys()), sep=', ')
-    print()
-    print('Sălile sunt:', end=' ')
-    print(*list(yaml_dict[SALI].keys()), sep=', ')
-
 
 def get_profs_initials(profs : list) -> dict:
     '''
@@ -89,7 +72,7 @@ def allign_string_with_spaces(s : str, max_len : int, allignment_type : str = 'c
     return s
 
 
-def pretty_print_timetable_aux_zile(timetable : {str : {(int, int) : {str : (str, str)}}}, input_path : str) -> str:
+def pretty_print_timetable(timetable : {str : {(int, int) : {str : (str, str)}}}, input_path : str) -> str:
     '''
     Primește un dicționar ce are chei zilele, cu valori dicționare de intervale reprezentate ca tupluri de int-uri, cu valori dicționare de săli, cu valori tupluri (profesor, materie)
 
@@ -98,12 +81,12 @@ def pretty_print_timetable_aux_zile(timetable : {str : {(int, int) : {str : (str
 
     max_len = 30
 
-    profs = read_yaml_file(input_path)[PROFESORI].keys()
+    profs = read_yaml_file(input_path)[TEACHERS].keys()
     profs_to_initials, _ = get_profs_initials(profs)
 
     table_str = '|           Interval           |             Luni             |             Marti            |           Miercuri           |              Joi             |            Vineri            |\n'
 
-    no_classes = len(timetable['Luni'][(8, 10)])
+    no_classes = len(timetable['Luni']['(8, 10)'])
 
     first_line_len = 187
     delim = '-' * first_line_len + '\n'
@@ -111,8 +94,9 @@ def pretty_print_timetable_aux_zile(timetable : {str : {(int, int) : {str : (str
     
     for interval in timetable['Luni']:
         s_interval = '|'
+        int_interval = eval(interval)
         
-        crt_str = allign_string_with_spaces(f'{interval[0]} - {interval[1]}', max_len, 'center')
+        crt_str = allign_string_with_spaces(f'{int_interval[0]} - {int_interval[1]}', max_len, 'center')
 
         s_interval += crt_str
 
@@ -137,68 +121,179 @@ def pretty_print_timetable_aux_zile(timetable : {str : {(int, int) : {str : (str
 
     return table_str
 
-def pretty_print_timetable_aux_intervale(timetable : {(int, int) : {str : {str : (str, str)}}}, input_path : str) -> str:
-    '''
-    Primește un dicționar de intervale reprezentate ca tupluri de int-uri, cu valori dicționare de zile, cu valori dicționare de săli, cu valori tupluri (profesor, materie)
+def parse_interval(interval : str):
+	intervals = interval.split('-')
+	return int(intervals[0].strip()), int(intervals[1].strip())
 
-    Returnează un string formatat să arate asemenea unui tabel excel cu zilele pe linii, intervalele pe coloane și în intersecția acestora, ferestrele de 2 ore cu materiile alocate în fiecare sală fiecărui profesor
-    '''
+def check_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}, timetable_specs : dict):
+	violated_constr = 0
+	acoperire_target = timetable_specs[SUBJECTS]
+	acoperire_reala = {subject : 0 for subject in acoperire_target}
+	ore_profesori = {teacher : 0 for teacher in timetable_specs[TEACHERS]}
 
-    max_len = 30
+	for day in timetable:
+		for interval in timetable[day]:
+			teaching_now = {}
+			for room in timetable[day][interval]:
+				if timetable[day][interval][room]:
+					teacher, subject = timetable[day][interval][room]
+					acoperire_reala[subject] += timetable_specs[CLASSROOMS][room][CAPACITY]
 
-    profs = read_yaml_file(input_path)[PROFESORI].keys()
-    profs_to_initials, _ = get_profs_initials(profs)
+					# PROFESORUL PREDĂ 2 SUBJECTS ÎN ACELAȘI INTERVAL
+					if teaching_now.get(teacher, False):
+						print("interval: ", interval)
+						# print(f'Profesorul {teacher} preda 2 materii in acelasi interval!')
+						violated_constr += 1
+						return violated_constr
+					else:
+						teaching_now[teacher] = True
 
-    table_str = '|           Interval           |             Luni             |             Marti            |           Miercuri           |              Joi             |            Vineri            |\n'
+					# MATERIA NU SE PREDA IN SALA
+					if subject not in timetable_specs[CLASSROOMS][room][SUBJECTS]:
+						# print(f'Materia {subject} nu se preda în sala {room}!')
+						violated_constr += 1
+						return violated_constr
 
-    no_classes = len(timetable[(8, 10)]['Luni'])
+					# PROFESORUL NU PREDA MATERIA
+					if subject not in timetable_specs[TEACHERS][teacher][SUBJECTS]:
+						# print(f'Profesorul {teacher} nu poate preda materia {subject}!')
+						violated_constr += 1
+						return violated_constr
 
-    first_line_len = 187
-    delim = '-' * first_line_len + '\n'
-    table_str = table_str + delim
-    
-    for interval in timetable:
-        s_interval = '|' + allign_string_with_spaces(f'{interval[0]} - {interval[1]}', max_len, 'center')
+					ore_profesori[teacher] += 1
 
-        for class_idx in range(no_classes):
-            if class_idx != 0:
-                s_interval += '|'
+	# CONDITIA DE ACOPERIRE
+	for subject in acoperire_target:
+		if acoperire_reala[subject] < acoperire_target[subject]:
+			# print(f'Materia {subject} nu are acoperirea necesară!')
+			violated_constr += 1
+			return violated_constr
 
-            for day in timetable[interval]:
-                classes = timetable[interval][day]
-                classroom = list(classes.keys())[class_idx]
+	# CONDITIA DE MAXIM 7 ORE PE SĂPTĂMÂNĂ
+	for teacher in ore_profesori:
+		if ore_profesori[teacher] > 7:
+			# print(f'Profesorul {teacher} tine mai mult de 7 sloturi!')
+			violated_constr += 1
+			return violated_constr
 
-                s_interval += '|'
+	return violated_constr
 
-                if not classes[classroom]:
-                    s_interval += allign_string_with_spaces(f'{classroom} - goala', max_len, 'left')
-                else:
-                    prof, subject = classes[classroom]
-                    s_interval += allign_string_with_spaces(f'{subject} : ({classroom} - {profs_to_initials[prof]})', max_len, 'left')
-            
-            s_interval += '|\n'
-        table_str += s_interval + delim
+def get_subject_info(timetable_specs):
+	"""
+	subject_info:
+		DS:
+			STUD_CT: 100
+			CLASSROOMS: [EG390]
+			TEACHERS: [RG, EG, CD, AD]
+		MS:
+			STUD_CT: 100
+			CLASSROOMS: [EG324]
+			TEACHERS: [CD, RG]
+		IA:
+			STUD_CT: 75
+			CLASSROOMS: [EG324]
+			TEACHERS: [PF, AD]
+	"""
+	subject_info = {}
+	for subject in timetable_specs[SUBJECTS]:
+		subject_info[subject] = {}
+		subject_info[subject][STUD_CT] = timetable_specs[SUBJECTS][subject]
+		subject_info[subject][CLASSROOMS] = []
+		subject_info[subject][TEACHERS] = []
 
-    return table_str
+	for classroom, info in timetable_specs[CLASSROOMS].items():
+		for subject in info[SUBJECTS]:
+			subject_info[subject][CLASSROOMS].append((classroom, info[CAPACITY]))
 
-def pretty_print_timetable(timetable : dict, input_path : str) -> str:
-    '''
-    Poate primi fie un dictionar de zile conținând dicționare de intervale conținând dicționare de săli cu tupluri (profesor, materie)
-    fie un dictionar de intervale conținând dictionare de zile conținând dicționare de săli cu tupluri (profesor, materie)
-    
-    Pentru cazul în care o sală nu este ocupată la un moment de timp, se așteaptă 'None' în valoare, în loc de tuplu
-    '''
-    if 'Luni' in timetable:
-        return pretty_print_timetable_aux_zile(timetable, input_path)
-    else:
-        return pretty_print_timetable_aux_intervale(timetable, input_path)
+	for teacher, info in timetable_specs[TEACHERS].items():
+		for subject in info[SUBJECTS]:
+			subject_info[subject][TEACHERS].append(teacher)
 
+	subject_info = dict(sorted(subject_info.items(), key=lambda x: len(x[1][TEACHERS]), reverse=True))
+	return subject_info
 
-if __name__ == '__main__':
-    filename = f'inputs/orar_mic_exact.yaml'
+def get_breaks(lst) -> list[int]:
+	"""
+		Returns a list with the number of 0s between 1s in a list
+	"""
+	i = 0
+	result = []
+	while i < len(lst) - 2:
+		zeros = 0
+		if lst[i] == 1 and lst[i + 1] == 0:
+			zeros += 1
+			i += 2
 
-    timetable_specs = read_yaml_file(filename)
+			while i < len(lst) - 1 and lst[i] == 0:
+				zeros += 1
+				i += 1
 
-    acces_yaml_attributes(timetable_specs)
+			if lst[i] == 1:
+				result.append(zeros)
+				i -= 1
+		i += 1
+		
+	return result
 
-    # print(pretty_print_timetable(timetable, filename))
+def check_soft_constraints(timetable : dict, teacher_constraints: dict, teacher_schedule : dict):
+	violated_constr = 0
+	for teacher in teacher_constraints:
+		for day in timetable:
+			for interval in timetable[day]:
+				if teacher_schedule[teacher][day][interval] > 0:
+					if day in teacher_constraints[teacher][DAYS]:
+						violated_constr += 1
+
+					if interval in teacher_constraints[teacher][INTERVALS]:
+						violated_constr += 1
+			
+			if teacher_constraints[teacher][BREAK] is not None:
+				break_interval = teacher_constraints[teacher][BREAK]
+				breaks_list = [teaches for _, teaches in teacher_schedule[teacher][day].items()]
+				result = get_breaks(breaks_list)
+
+				if break_interval == 0 and len(result) != 0:
+					violated_constr += len(result) # nu tin cont de cat de lungi sunt acele pauze
+				elif break_interval == 2:
+					violated_constr += len([i for i in result if i >= 2])
+				elif break_interval == 4:
+					violated_constr += len([i for i in result if i >= 3])
+				elif break_interval == 6:
+					violated_constr += result.count(4)	
+					
+	return violated_constr
+
+def get_teacher_constraints(timetable_specs : dict) -> dict:
+	teacher_constraints = {}
+	for teacher in timetable_specs[TEACHERS]:
+		teacher_constraints[teacher] = {}
+		teacher_constraints[teacher][DAYS] = []
+		teacher_constraints[teacher][INTERVALS] = []
+		teacher_constraints[teacher][BREAK] = None
+
+		for constraint in timetable_specs[TEACHERS][teacher][CONSTRAINTS]:
+			if constraint[0] != '!':
+				continue
+			else:
+				constraint = constraint[1:]
+
+				# !zi
+				if constraint in timetable_specs[DAYS]:
+					teacher_constraints[teacher][DAYS].append(constraint)
+
+				# !interval
+				elif '-' in constraint:
+					interval = parse_interval(constraint)
+					start, end = interval
+
+					if start != end - 2:
+						intervals = [str((i, i + 2)) for i in range(start, end, 2)]
+					else:
+						intervals = [str((start, end))]
+
+					teacher_constraints[teacher][INTERVALS].extend(intervals)
+
+				else:
+					teacher_constraints[teacher][BREAK] = int(constraint[-1])
+
+	return teacher_constraints

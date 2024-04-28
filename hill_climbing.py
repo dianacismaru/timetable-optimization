@@ -1,11 +1,8 @@
 from __future__ import annotations
 import copy
 from utils import *
-from helper import *
 
 import random
-# random.seed(random.random())
-# random.seed(2)
 
 class State:
 	def __init__(
@@ -34,7 +31,6 @@ class State:
 		if self.hard_conflicts > 0:
 			tries = 0
 			while self.hard_conflicts > 0 and tries < 1000:
-				# print("ce drc fac")
 				self.teacher_schedule, self.timetable = self.generate_timetable()
 				self.hard_conflicts = self.get_hard_conflicts()
 				tries += 1
@@ -47,11 +43,11 @@ class State:
 		mini_timetable = {}
 		teacher_busy_slots = {}
 
-		for day in self.timetable_specs[ZILE]:
+		for day in self.timetable_specs[DAYS]:
 			timetable[day] = {}
 			mini_timetable[day] = {}
 
-			for slot in self.timetable_specs[INTERVALE]:
+			for slot in self.timetable_specs[INTERVALS]:
 				timetable[day][slot] = {}
 				mini_timetable[day][slot] = 0
 				teacher_busy_slots[(day, slot)] = []
@@ -86,9 +82,8 @@ class State:
 				free_slots[classroom].remove(random_slot)
 				(day, slot) = random_slot
 
-				# # Candidates are the teachers that are not busy in that slot and that can teach the subject
+				# Candidates are the teachers that are not busy in that slot and that can teach the subject
 				candidates = list(filter(lambda x: x not in teacher_busy_slots[(day, slot)], infos[TEACHERS]))
-				# shuffle candidates
 				random.shuffle(candidates)
 
 				if len(candidates) == 0:
@@ -161,9 +156,6 @@ class State:
 									states_created += 1
 									if new_state.soft_conflicts <= self.soft_conflicts:
 										neighbors.append(new_state)
-									# print(day, interval, classroom, new_day, new_interval, new_classroom)
-								# else:
-									# print(day, interval, classroom, new_day, new_interval, new_classroom)
 
 		return neighbors, states_created
 
@@ -196,36 +188,17 @@ class State:
 		info_first_class = self.timetable_specs[CLASSROOMS][classroom]
 		info_second_class = self.timetable_specs[CLASSROOMS][new_classroom]
 		if info_first_class[CAPACITY] != info_second_class[CAPACITY]:
-			# print("NONE pentru ca nu au aceeasi capacitate")
 			return None
 		
 		if first_value is not None:
 			if first_value[1] not in info_second_class[SUBJECTS]:
-				# print("not in subjects")
 				return None
-			
-			# if new_day in self.teacher_constraints[first_value[0]][DAYS]:
-			# 	print("newday not in constraint days")
-			# 	return None
-			
-			# if new_interval in self.teacher_constraints[first_value[0]][INTERVALS]:
-			# 	print("newinterval not in constraint intervals")
-			# 	return None
-			
+
 		if second_value is not None:
 			if second_value[1] not in info_first_class[SUBJECTS]:
-				# print("not in subjects2222222222")
 				return None
-			
-			# if day in self.teacher_constraints[second_value[0]][DAYS]:
-			# 	print("newday not in constraint days2222222222")
-			# 	return None
-			
-			# if interval in self.teacher_constraints[second_value[0]][INTERVALS]:
-			# 	print("not in subjects22222222222222222222")
-			# 	return None
+		
 
-		# verific ca au si capacitatile egale
 		if first_value is not None and second_value is not None:
 		
 			# materiile la care poate sa predea primul profesor ales
@@ -236,13 +209,11 @@ class State:
 
 			if first_value[1] not in info_second_subject \
 				or second_value[1] not in info_first_subject:
-				# print("3333333333")
 				return None
 			
 			# trebuie sa verific ca intervalele profesorilor nu sunt deja ocupate
 			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0 \
 				or self.teacher_schedule[second_value[0]][day][interval] > 0:
-				# print("Intervale ocupate")
 				return None
 			
 		new_timetable = copy.deepcopy(self.timetable)
@@ -250,7 +221,6 @@ class State:
 
 		if first_value is not None:
 			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0:
-				# print("444444444444")
 				return None
 			
 			new_orar_profesori[first_value[0]][new_day][new_interval] += 1
@@ -258,7 +228,6 @@ class State:
 
 		if second_value is not None:
 			if self.teacher_schedule[second_value[0]][day][interval] > 0:
-				# print("444444444444")
 				return None
 			
 			new_orar_profesori[second_value[0]][day][interval] += 1
@@ -354,7 +323,8 @@ def random_restart_hill_climbing(
 	print("Minimul de soft conflicts gasit: ", min_soft_conflicts)
 	return is_final, total_iters, state, total_states
 
-if __name__ == '__main__':
+ 
+def hill_climbing_algorithm():
 	filename = f'inputs/dummy.yaml'
 	# filename = f'inputs/orar_mic_exact.yaml'
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
@@ -388,11 +358,8 @@ if __name__ == '__main__':
 	print("Am facut ", states, " stari")
 	print("Execution time: ", end_time - start_time)
 	
-	import json
-	filename = 'my_output.json'
-	with open(filename, 'w') as file:
-		json.dump(timetable.timetable, file, indent=4)
+	print(pretty_print_timetable(timetable.timetable, filename))
 
-	with open('orar_profi.json', 'w') as file:
-		json.dump(timetable.teacher_schedule, file, indent=4)
+if __name__ == '__main__':
+	hill_climbing_algorithm()
 	# --------------------------------------
