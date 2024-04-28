@@ -5,7 +5,7 @@ from helper import *
 
 import random
 # random.seed(random.random())
-random.seed(2)
+# random.seed(2)
 
 class State:
 	def __init__(
@@ -31,13 +31,13 @@ class State:
 		self.soft_conflicts = soft_conflicts if soft_conflicts is not None \
 			else self.get_soft_conflicts()
 		
-		if self.hard_conflicts == 0:
+		if self.hard_conflicts > 0:
 			tries = 0
 			while self.hard_conflicts > 0 and tries < 1000:
+				# print("ce drc fac")
 				self.teacher_schedule, self.timetable = self.generate_timetable()
 				self.hard_conflicts = self.get_hard_conflicts()
 				tries += 1
-
 			self.soft_conflicts = self.get_soft_conflicts()
 
 	def generate_timetable(self) -> tuple[dict, dict]:
@@ -86,21 +86,36 @@ class State:
 				free_slots[classroom].remove(random_slot)
 				(day, slot) = random_slot
 
-				# Candidates are the teachers that are not busy in that slot and that can teach the subject
+				# # Candidates are the teachers that are not busy in that slot and that can teach the subject
 				candidates = list(filter(lambda x: x not in teacher_busy_slots[(day, slot)], infos[TEACHERS]))
-				if not candidates:
+				# shuffle candidates
+				random.shuffle(candidates)
+
+				if len(candidates) == 0:
 					bad_solution = True
 					break
 
+				candidates_top = list(filter(lambda x: day not in self.teacher_constraints[x][DAYS] \
+							 and slot not in self.teacher_constraints[x][INTERVALS], candidates))
+				
+				candidates_mid = list(filter(lambda x: day not in self.teacher_constraints[x][DAYS] \
+							 and slot in self.teacher_constraints[x][INTERVALS], candidates))
+				
+				candidates_midd = list(filter(lambda x: day in self.teacher_constraints[x][DAYS] \
+							 and slot not in self.teacher_constraints[x][INTERVALS], candidates))
+
+				candidates_ew = list(filter(lambda x: day in self.teacher_constraints[x][DAYS] \
+							 and slot in self.teacher_constraints[x][INTERVALS], candidates))
+				
+				candidates = candidates_top + candidates_mid + candidates_midd + candidates_ew
 				found_candidate = False
 				teacher = None
-				tries = 0
-				while not found_candidate and tries < 10:
-					tries += 1
-					teacher = candidates[random.randint(0, len(candidates) - 1)]
+				i = 0
+				while not found_candidate and i < len(candidates):
+					teacher = candidates[i]
+					i += 1
 					if courses_count[teacher] < 7:
 						found_candidate = True
-						candidates.remove(teacher)
 
 				if not found_candidate:
 					bad_solution = True
@@ -123,55 +138,57 @@ class State:
 	def is_final(self) -> bool:
 		return self.soft_conflicts == 0 and self.hard_conflicts == 0
  	
-	def get_best_neigh(self) -> tuple[State, int]:
-		best_neighbor = None
-		curr_soft_conflicts = self.soft_conflicts
+	def get_best_neigh(self) -> tuple[list[State], int]:
 		days = list(self.timetable.keys())
 		intervals = list(self.timetable[days[0]].keys())
 		classrooms = list(self.timetable[days[0]][intervals[0]].keys())
 		num_days = len(days)
-		num_intervals = len(intervals)
-		num_classrooms = len(classrooms)
 		states_created = 0
+		neighbors = []
 
 		for i in range(num_days):
 			day = days[i]
-			for j in range(num_intervals):
-				interval = intervals[j]
-				for k in range(num_classrooms):
-					classroom = classrooms[k]
+			for interval in intervals:
+				for classroom in classrooms:
 					for x in range(i, num_days):
 						new_day = days[x]
-						for y in range(num_intervals):
-							new_interval = intervals[y]
-							for z in range(num_classrooms):
-								new_classroom = classrooms[z]
-								# print(day, interval, classroom, new_day, new_interval, new_classroom)
+						for new_interval in intervals:
+							for new_classroom in classrooms:
 								new_state = self.generate_successor(day, interval, classroom, \
 														new_day, new_interval, new_classroom)
-								
+			
 								if new_state is not None:
 									states_created += 1
-									next_state_soft_conflicts = new_state.soft_conflicts
-									if next_state_soft_conflicts < curr_soft_conflicts:
-										curr_soft_conflicts = next_state_soft_conflicts
-										best_neighbor = new_state
-										if next_state_soft_conflicts == 0:
-											return best_neighbor, states_created
-		return best_neighbor, states_created
+									if new_state.soft_conflicts <= self.soft_conflicts:
+										neighbors.append(new_state)
+									# print(day, interval, classroom, new_day, new_interval, new_classroom)
+								# else:
+									# print(day, interval, classroom, new_day, new_interval, new_classroom)
+
+		return neighbors, states_created
 
 	def generate_successor(self, day: str, interval: tuple[int, int], classroom: str, \
 					   new_day: str, new_interval: tuple[int, int], new_classroom: str) -> State:
 		#  ('nume profesor', 'materia predata in acel slot')
 		first_value = self.timetable[day][interval][classroom]
 		second_value = self.timetable[new_day][new_interval][new_classroom]
+		# if day == 'Luni' and new_day == 'Luni':
+		# 	print("\n\n----------------> LUNI -->")
+		# 	print("interval = ", interval)
+		# 	print("classroom = ", classroom)
+		# 	print("new_interval = ", new_interval)
+		# 	print("new_classroom = ", new_classroom)
+		# 	print("first value = ", first_value)
+		# 	print("second value = ", second_value)
 
 		# nu are rost sa intershimb daca ambele sunt None
 		if first_value is None and second_value is None:
+			# print("NONE pentru ca ambele sunt None")
 			return None
 	
 		# daca sunt egale, nu are rost sa le interschimb
 		if first_value == second_value:
+			# print("NONE pentru ca sunt egale")
 			return None
 		
 		# trebuie sa verific daca clasele sunt compatibile dpdv al capacitatii si al materiilor predate
@@ -179,27 +196,34 @@ class State:
 		info_first_class = self.timetable_specs[CLASSROOMS][classroom]
 		info_second_class = self.timetable_specs[CLASSROOMS][new_classroom]
 		if info_first_class[CAPACITY] != info_second_class[CAPACITY]:
+			# print("NONE pentru ca nu au aceeasi capacitate")
 			return None
 		
 		if first_value is not None:
 			if first_value[1] not in info_second_class[SUBJECTS]:
+				# print("not in subjects")
 				return None
 			
-			if new_day in self.teacher_constraints[first_value[0]][DAYS]:
-				return None
+			# if new_day in self.teacher_constraints[first_value[0]][DAYS]:
+			# 	print("newday not in constraint days")
+			# 	return None
 			
-			if new_interval in self.teacher_constraints[first_value[0]][INTERVALS]:
-				return None
+			# if new_interval in self.teacher_constraints[first_value[0]][INTERVALS]:
+			# 	print("newinterval not in constraint intervals")
+			# 	return None
 			
 		if second_value is not None:
 			if second_value[1] not in info_first_class[SUBJECTS]:
+				# print("not in subjects2222222222")
 				return None
 			
-			if day in self.teacher_constraints[second_value[0]][DAYS]:
-				return None
+			# if day in self.teacher_constraints[second_value[0]][DAYS]:
+			# 	print("newday not in constraint days2222222222")
+			# 	return None
 			
-			if interval in self.teacher_constraints[second_value[0]][INTERVALS]:
-				return None
+			# if interval in self.teacher_constraints[second_value[0]][INTERVALS]:
+			# 	print("not in subjects22222222222222222222")
+			# 	return None
 
 		# verific ca au si capacitatile egale
 		if first_value is not None and second_value is not None:
@@ -212,11 +236,13 @@ class State:
 
 			if first_value[1] not in info_second_subject \
 				or second_value[1] not in info_first_subject:
+				# print("3333333333")
 				return None
 			
 			# trebuie sa verific ca intervalele profesorilor nu sunt deja ocupate
 			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0 \
 				or self.teacher_schedule[second_value[0]][day][interval] > 0:
+				# print("Intervale ocupate")
 				return None
 			
 		new_timetable = copy.deepcopy(self.timetable)
@@ -224,6 +250,7 @@ class State:
 
 		if first_value is not None:
 			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0:
+				# print("444444444444")
 				return None
 			
 			new_orar_profesori[first_value[0]][new_day][new_interval] += 1
@@ -231,6 +258,7 @@ class State:
 
 		if second_value is not None:
 			if self.teacher_schedule[second_value[0]][day][interval] > 0:
+				# print("444444444444")
 				return None
 			
 			new_orar_profesori[second_value[0]][day][interval] += 1
@@ -255,19 +283,36 @@ class State:
 def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State, int]:
 	iters, total_states = 0, 0
 	state = initial.clone()
+	extra_tries = 0
 
-	while iters < max_iters:
-		# print(iters)
-		print("State ul curent are ", state.soft_conflicts, " soft conflicts")
+	while iters < max_iters + extra_tries:
+		if extra_tries > 20:
+			break
+		random.seed(random.random())
+		prev_conflicts = state.soft_conflicts
+
+		print("\n=============================================================")
+		print("extra tries current", extra_tries)
+		print(iters, ", State ul curent are ", state.soft_conflicts, " soft conflicts")
 		if state.soft_conflicts == 0:
 			return True, iters, state, total_states
 
 		iters += 1
-		best_neighbor, states = state.get_best_neigh()
+		neighbors, states = state.get_best_neigh()
 		total_states += states
-
-		if best_neighbor == None:
+		if len(neighbors) == 0:
 			break
+
+		# best neigh is the one with the lowest number of soft conflicts from neighbors
+		costs = [neigh.soft_conflicts for neigh in neighbors]
+		# print(costs)
+		cost_minim_vecini = min(costs)
+		best_neighbors = [neigh for neigh in neighbors if neigh.soft_conflicts == cost_minim_vecini]
+		best_neighbor = random.choice(best_neighbors)
+		if cost_minim_vecini == prev_conflicts and cost_minim_vecini < 4:
+			extra_tries += 1
+		else:
+			extra_tries = 0
 
 		state = best_neighbor.clone()
 
@@ -275,16 +320,20 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 def random_restart_hill_climbing(
 	initial: State,
-	max_restarts: int = 30,
-	run_max_iters: int = 100,
+	max_restarts: int = 70,
+	run_max_iters: int = 40,
 ) -> tuple[bool, int, State, int]:
 
 	total_iters, total_states = 0, 0
 	current_restarts = 0
 	is_final = False
 	state = initial
+	min_soft_conflicts = state.soft_conflicts
 
 	while current_restarts <= max_restarts:
+		random.seed(random.random())
+		print("\nrestart ", current_restarts)
+		print("incep cu ", state.soft_conflicts, " soft conflicts")
 		is_final, new_iters, state, states = hill_climbing(state, run_max_iters)
 		total_iters += new_iters
 		total_states += states
@@ -292,18 +341,24 @@ def random_restart_hill_climbing(
 		if is_final:
 			break
 
+		check_print_soft_constraints(state.timetable, state.teacher_constraints, state.teacher_schedule)
 		print("Am ajuns la ", state.soft_conflicts, " soft conflicts")
-		current_restarts += 1
-		print("restart ", current_restarts)
-		state = State(state.timetable_specs, state.teacher_constraints, state.subject_info)
+		print("Si am generat aici ", states, " stari")
+		if state.soft_conflicts < min_soft_conflicts:
+			min_soft_conflicts = state.soft_conflicts
 
+		current_restarts += 1
+		if current_restarts <= max_restarts:
+			state = State(state.timetable_specs, state.teacher_constraints, state.subject_info)
+
+	print("Minimul de soft conflicts gasit: ", min_soft_conflicts)
 	return is_final, total_iters, state, total_states
 
 if __name__ == '__main__':
-	filename = f'inputs/dummy.yaml'
+	# filename = f'inputs/dummy.yaml'
 	# filename = f'inputs/orar_mic_exact.yaml'
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
-	# filename = f'inputs/orar_mare_relaxat.yaml'
+	filename = f'inputs/orar_mare_relaxat.yaml'
 	# filename = f'inputs/orar_bonus_exact.yaml'
 	# filename = f'inputs/orar_constrans_incalcat.yaml'
 	print("Fisierul de input: ", filename)
@@ -330,9 +385,9 @@ if __name__ == '__main__':
 
 	print("Am ajuns in stare finala? ", final)
 	print("dupa ", iters, " iteratii")
-	# print("Am facut ", states, " stari")
+	print("Am facut ", states, " stari")
 	print("Execution time: ", end_time - start_time)
-
+	
 	import json
 	filename = 'my_output.json'
 	with open(filename, 'w') as file:
