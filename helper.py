@@ -150,51 +150,6 @@ def check_soft_constraints(timetable : dict, teacher_constraints: dict, teacher_
 					
 	return violated_constr
 
-
-def check_print_soft_constraints(timetable : dict, teacher_constraints: dict, teacher_schedule : dict):
-	violated_constr = 0
-	print()
-	for teacher in teacher_constraints:
-		for day in timetable:
-			for interval in timetable[day]:
-				if teacher_schedule[teacher][day][interval] > 0:
-					if day in teacher_constraints[teacher][DAYS]:
-						print(f'Profesorul {teacher} nu dorește să predea în ziua {day}!')
-						violated_constr += 1
-
-					if interval in teacher_constraints[teacher][INTERVALS]:
-						print(f'Profesorul {teacher} nu dorește să predea în intervalul {interval}!')
-						violated_constr += 1
-			
-			if teacher_constraints[teacher][BREAK] is not None:
-				break_interval = teacher_constraints[teacher][BREAK]
-				breaks_list = [teaches for _, teaches in teacher_schedule[teacher][day].items()]
-				result = get_breaks(breaks_list)
-
-				if break_interval == 0 and len(result) != 0:
-					current_violations = len(result)
-					if current_violations > 0:
-						print(f'Profesorul {teacher} nu dorește să aibă pauză!')
-						violated_constr += current_violations
-
-				elif break_interval == 2:
-					current_violations = len([i for i in result if i >= 2])
-					if current_violations > 0:
-						print(f'Profesorul {teacher} nu dorește să aibă pauză mai mare de 2 ore!')
-						violated_constr += current_violations
-				elif break_interval == 4:
-					current_violations = len([i for i in result if i >= 3])
-					if current_violations > 0:
-						print(f'Profesorul {teacher} nu dorește să aibă pauză mai mare de 4 ore!')
-						violated_constr += current_violations
-				elif break_interval == 6:
-					current_violations = result.count(4)
-					if current_violations > 0:
-						print(f'Profesorul {teacher} nu dorește să aibă pauză mai mare de 6 ore!')
-						violated_constr += current_violations
-					
-	return violated_constr
-
 def get_teacher_constraints(timetable_specs : dict) -> dict:
 	teacher_constraints = {}
 	for teacher in timetable_specs[TEACHERS]:

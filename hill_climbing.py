@@ -286,7 +286,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 	extra_tries = 0
 
 	while iters < max_iters + extra_tries:
-		if extra_tries > 20:
+		if extra_tries > 30 and iters >= max_iters:
 			break
 		random.seed(random.random())
 		prev_conflicts = state.soft_conflicts
@@ -309,7 +309,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 		cost_minim_vecini = min(costs)
 		best_neighbors = [neigh for neigh in neighbors if neigh.soft_conflicts == cost_minim_vecini]
 		best_neighbor = random.choice(best_neighbors)
-		if cost_minim_vecini == prev_conflicts and cost_minim_vecini < 4:
+		if cost_minim_vecini == prev_conflicts and cost_minim_vecini < 3:
 			extra_tries += 1
 		else:
 			extra_tries = 0
@@ -339,9 +339,9 @@ def random_restart_hill_climbing(
 		total_states += states
 
 		if is_final:
+			min_soft_conflicts = 0
 			break
 
-		check_print_soft_constraints(state.timetable, state.teacher_constraints, state.teacher_schedule)
 		print("Am ajuns la ", state.soft_conflicts, " soft conflicts")
 		print("Si am generat aici ", states, " stari")
 		if state.soft_conflicts < min_soft_conflicts:
@@ -355,10 +355,10 @@ def random_restart_hill_climbing(
 	return is_final, total_iters, state, total_states
 
 if __name__ == '__main__':
-	# filename = f'inputs/dummy.yaml'
+	filename = f'inputs/dummy.yaml'
 	# filename = f'inputs/orar_mic_exact.yaml'
 	# filename = f'inputs/orar_mediu_relaxat.yaml'
-	filename = f'inputs/orar_mare_relaxat.yaml'
+	# filename = f'inputs/orar_mare_relaxat.yaml'
 	# filename = f'inputs/orar_bonus_exact.yaml'
 	# filename = f'inputs/orar_constrans_incalcat.yaml'
 	print("Fisierul de input: ", filename)
