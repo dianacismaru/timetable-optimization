@@ -249,12 +249,10 @@ def hill_climbing(initial: State, max_iters: int = MAX_ITERATIONS) -> tuple[bool
 	while iters < max_iters + extra_tries:
 		if extra_tries > 30 and iters >= max_iters:
 			break
+
 		random.seed(random.random())
 		prev_conflicts = state.soft_conflicts
 
-		print("\n=============================================================")
-		print("extra tries current", extra_tries)
-		print(iters, ", State ul curent are ", state.soft_conflicts, " soft conflicts")
 		if state.soft_conflicts == 0:
 			return True, iters, state, total_states
 
@@ -266,10 +264,10 @@ def hill_climbing(initial: State, max_iters: int = MAX_ITERATIONS) -> tuple[bool
 
 		# best neigh is the one with the lowest number of soft conflicts from neighbors
 		costs = [neigh.soft_conflicts for neigh in neighbors]
-		# print(costs)
 		cost_minim_vecini = min(costs)
 		best_neighbors = [neigh for neigh in neighbors if neigh.soft_conflicts == cost_minim_vecini]
 		best_neighbor = random.choice(best_neighbors)
+
 		if cost_minim_vecini == prev_conflicts and cost_minim_vecini < 3:
 			extra_tries += 1
 		else:
@@ -292,8 +290,7 @@ def random_restart_hill_climbing(
 
 	while current_restarts <= max_restarts:
 		random.seed(random.random())
-		print("\nrestart ", current_restarts)
-		print("incep cu ", state.soft_conflicts, " soft conflicts")
+
 		is_final, new_iters, state, states = hill_climbing(state)
 		total_iters += new_iters
 		total_states += states
@@ -302,8 +299,6 @@ def random_restart_hill_climbing(
 			min_soft_conflicts = 0
 			break
 
-		print("Am ajuns la ", state.soft_conflicts, " soft conflicts")
-		print("Si am generat aici ", states, " stari")
 		if state.soft_conflicts < min_soft_conflicts:
 			min_soft_conflicts = state.soft_conflicts
 
@@ -311,27 +306,9 @@ def random_restart_hill_climbing(
 		if current_restarts <= max_restarts:
 			state = State(state.timetable_specs, state.teacher_constraints, state.subject_info)
 
-	print("Minimul de soft conflicts gasit: ", min_soft_conflicts)
-	return is_final, total_iters, state, total_states
+	return is_final, total_iters, state, total_states, current_restarts, min_soft_conflicts
 
  
-def hill_climbing_algorithm(timetable_specs, teacher_constraints, subject_info) -> dict:
+def hill_climbing_algorithm(timetable_specs, teacher_constraints, subject_info):
 	timetable = State(timetable_specs, teacher_constraints, subject_info)
-
-	print("Conflicte soft inainte: ", timetable.get_soft_conflicts())
-	
-	import time
-	start_time = time.time()
-	final, iters, timetable, states = random_restart_hill_climbing(timetable)
-	end_time = time.time()
-
-	print("Am ajuns in stare finala? ", final)
-	print("dupa ", iters, " iteratii")
-	print("Am facut ", states, " stari")
-	print("Execution time: ", end_time - start_time)
-	
-	return timetable.timetable
-
-if __name__ == '__main__':
-	hill_climbing_algorithm()
-	# --------------------------------------
+	return random_restart_hill_climbing(timetable)

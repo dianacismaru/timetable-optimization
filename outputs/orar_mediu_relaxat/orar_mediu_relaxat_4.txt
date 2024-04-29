@@ -1,0 +1,40 @@
+S-a ajuns in stare finala? True
+Numarul de restart-uri: 0
+Timpul de executie total: 2.1895809173583984
+Numarul minim de conflicte soft incalcate: 0
+Numarul total de iteratii: 2
+Numar total de stari create: 2566
+Numar mediu de stari create per iteratie: 1283
+
+|           Interval           |             Luni             |             Marti            |           Miercuri           |              Joi             |            Vineri            |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|            8 - 10            |      MS : (ED038 - PD)       |      MS : (ED038 - PD)       |      PL : (ED038 - CA)       |      PL : (ED038 - RE)       |      MS : (ED038 - IG)       |
+|                              |      ED041 - goala           |      ED041 - goala           |      SOC : (ED041 - MA)      |      ED041 - goala           |      ED041 - goala           |
+|                              |      AA : (ED069 - MA)       |      ED069 - goala           |      ED069 - goala           |      AA : (ED069 - EV)       |      ED069 - goala           |
+|                              |      PR011 - goala           |      SOC : (PR011 - IC)      |      PR011 - goala           |      SOC : (PR011 - RA)      |      PR011 - goala           |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|            10 - 12           |      PL : (ED038 - CA)       |      SOC : (ED038 - IG)      |      PL : (ED038 - CA)       |      SOC : (ED038 - SA)      |      MS : (ED038 - IC)       |
+|                              |      SOC : (ED041 - MA)      |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      MS : (ED041 - MP)       |
+|                              |      PL : (ED069 - RE)       |      AA : (ED069 - MA)       |      ED069 - goala           |      ED069 - goala           |      ED069 - goala           |
+|                              |      SOC : (PR011 - MP)      |      AA : (PR011 - MA2)      |      PR011 - goala           |      PL : (PR011 - CA)       |      AA : (PR011 - EV)       |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|            12 - 14           |      PL : (ED038 - MA2)      |      AA : (ED038 - PC)       |      PL : (ED038 - CA)       |      AA : (ED038 - DA)       |      ED038 - goala           |
+|                              |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |
+|                              |      ED069 - goala           |      ED069 - goala           |      SOC : (ED069 - RA)      |      ED069 - goala           |      AA : (ED069 - EV)       |
+|                              |      PR011 - goala           |      SOC : (PR011 - CF)      |      PR011 - goala           |      PR011 - goala           |      PR011 - goala           |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|            14 - 16           |      PL : (ED038 - RE)       |      AA : (ED038 - RA2)      |      ED038 - goala           |      PL : (ED038 - RE)       |      PL : (ED038 - RE)       |
+|                              |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      MS : (ED041 - IG)       |
+|                              |      ED069 - goala           |      MS : (ED069 - AP)       |      ED069 - goala           |      SOC : (ED069 - CF)      |      ED069 - goala           |
+|                              |      MS : (PR011 - MP)       |      MS : (PR011 - IG)       |      SOC : (PR011 - CF)      |      AA : (PR011 - DA)       |      PR011 - goala           |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|            16 - 18           |      SOC : (ED038 - CF)      |      AA : (ED038 - MA)       |      MS : (ED038 - PD)       |      PL : (ED038 - RE)       |      MS : (ED038 - IC)       |
+|                              |      ED041 - goala           |      MS : (ED041 - IG)       |      ED041 - goala           |      ED041 - goala           |      AA : (ED041 - EV)       |
+|                              |      ED069 - goala           |      AA : (ED069 - RA2)      |      ED069 - goala           |      ED069 - goala           |      PL : (ED069 - RE)       |
+|                              |      PL : (PR011 - CA)       |      PR011 - goala           |      MS : (PR011 - RA2)      |      PL : (PR011 - CA)       |      MS : (PR011 - RA2)      |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|            18 - 20           |      ED038 - goala           |      MS : (ED038 - IG)       |      ED038 - goala           |      MS : (ED038 - PD)       |      ED038 - goala           |
+|                              |      AA : (ED041 - MA2)      |      SOC : (ED041 - IC)      |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |
+|                              |      ED069 - goala           |      ED069 - goala           |      ED069 - goala           |      SOC : (ED069 - SA)      |      SOC : (ED069 - DA)      |
+|                              |      AA : (PR011 - DA)       |      PL : (PR011 - MA2)      |      AA : (PR011 - MA2)      |      SOC : (PR011 - IG)      |      PR011 - goala           |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

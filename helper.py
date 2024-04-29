@@ -4,6 +4,9 @@ MAX_RESTARTS = 70
 MAX_ITERATIONS = 40
 
 def breaks_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}, timetable_specs : dict):
+	'''
+		Verifica dacă orarul respecta sau nu toate constrangerile hard
+	'''
 	acoperire_target = timetable_specs[SUBJECTS]
 	acoperire_reala = {subject : 0 for subject in acoperire_target}
 	ore_profesori = {teacher : 0 for teacher in timetable_specs[TEACHERS]}
@@ -16,35 +19,30 @@ def breaks_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}
 					teacher, subject = timetable[day][interval][room]
 					acoperire_reala[subject] += timetable_specs[CLASSROOMS][room][CAPACITY]
 
-					# PROFESORUL PREDĂ 2 SUBJECTS ÎN ACELAȘI INTERVAL
+					# Profesorul preda 2 materii in acelasi interval
 					if teaching_now.get(teacher, False):
-						# print("interval: ", interval)
-						# print(f'Profesorul {teacher} preda 2 materii in acelasi interval!')
 						return True
 					else:
 						teaching_now[teacher] = True
 
-					# MATERIA NU SE PREDA IN SALA
+					# Materia nu se preda in sala respectiva
 					if subject not in timetable_specs[CLASSROOMS][room][SUBJECTS]:
-						# print(f'Materia {subject} nu se preda în sala {room}!')
 						return True
-					# PROFESORUL NU PREDA MATERIA
+
+					# Profesorul nu poate preda materia respectiva
 					if subject not in timetable_specs[TEACHERS][teacher][SUBJECTS]:
-						# print(f'Profesorul {teacher} nu poate preda materia {subject}!')
 						return True
 
 					ore_profesori[teacher] += 1
 
-	# CONDITIA DE ACOPERIRE
+	# Conditia de acoperire a tuturor studentilor asignati la o materie
 	for subject in acoperire_target:
 		if acoperire_reala[subject] < acoperire_target[subject]:
-			# print(f'Materia {subject} nu are acoperirea necesară!')
 			return True
 
-	# CONDITIA DE MAXIM 7 ORE PE SĂPTĂMÂNĂ
+	# Conditia ca un profesor sa nu sustina mai mult de 7 cursuri
 	for teacher in ore_profesori:
 		if ore_profesori[teacher] > 7:
-			# print(f'Profesorul {teacher} tine mai mult de 7 sloturi!')
 			return True
 
 	return False
@@ -85,7 +83,10 @@ def get_subject_info(timetable_specs):
 
 def get_breaks(lst) -> list[int]:
 	"""
-		Returns a list with the number of 0s between 1s in a list
+		Calculeaza numarul de zero-uri intre 1-uri dintr-o lista
+		exemplu:
+		[1, 0, 0, 0, 1] -> [3] -> este o pauza de 3 intervale, adica de 6 ore
+		[1, 0, 1, 0, 0, 1] -> [1, 2] --> sunt 2 pauze, una de 2 ore (un interval) si una de 4 ore (2 intervale)
 	"""
 	i = 0
 	result = []
@@ -124,7 +125,7 @@ def check_soft_constraints(timetable : dict, teacher_constraints: dict, teacher_
 				result = get_breaks(breaks_list)
 
 				if break_interval == 0 and len(result) != 0:
-					violated_constr += len(result) # nu tin cont de cat de lungi sunt acele pauze
+					violated_constr += len(result)
 				elif break_interval == 2:
 					violated_constr += len([i for i in result if i >= 2])
 				elif break_interval == 4:
