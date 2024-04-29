@@ -1,19 +1,9 @@
-INTERVALS = 'Intervale'
-DAYS = 'Zile'
-SUBJECTS = 'Materii'
-TEACHERS = 'Profesori'
-CLASSROOMS = 'Sali'
-CONSTRAINTS = 'Constrangeri'
-CAPACITY = 'Capacitate'
-STUD_CT = 'Stud_ct'
-BREAK = 'Pauza'
+from utils import *
 
-def parse_interval(interval : str):
-	intervals = interval.split('-')
-	return int(intervals[0].strip()), int(intervals[1].strip())
+MAX_RESTARTS = 70
+MAX_ITERATIONS = 40
 
-def check_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}, timetable_specs : dict):
-	violated_constr = 0
+def breaks_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}, timetable_specs : dict):
 	acoperire_target = timetable_specs[SUBJECTS]
 	acoperire_reala = {subject : 0 for subject in acoperire_target}
 	ore_profesori = {teacher : 0 for teacher in timetable_specs[TEACHERS]}
@@ -28,24 +18,20 @@ def check_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}
 
 					# PROFESORUL PREDĂ 2 SUBJECTS ÎN ACELAȘI INTERVAL
 					if teaching_now.get(teacher, False):
-						print("interval: ", interval)
+						# print("interval: ", interval)
 						# print(f'Profesorul {teacher} preda 2 materii in acelasi interval!')
-						violated_constr += 1
-						return violated_constr
+						return True
 					else:
 						teaching_now[teacher] = True
 
 					# MATERIA NU SE PREDA IN SALA
 					if subject not in timetable_specs[CLASSROOMS][room][SUBJECTS]:
 						# print(f'Materia {subject} nu se preda în sala {room}!')
-						violated_constr += 1
-						return violated_constr
-
+						return True
 					# PROFESORUL NU PREDA MATERIA
 					if subject not in timetable_specs[TEACHERS][teacher][SUBJECTS]:
 						# print(f'Profesorul {teacher} nu poate preda materia {subject}!')
-						violated_constr += 1
-						return violated_constr
+						return True
 
 					ore_profesori[teacher] += 1
 
@@ -53,17 +39,15 @@ def check_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}
 	for subject in acoperire_target:
 		if acoperire_reala[subject] < acoperire_target[subject]:
 			# print(f'Materia {subject} nu are acoperirea necesară!')
-			violated_constr += 1
-			return violated_constr
+			return True
 
 	# CONDITIA DE MAXIM 7 ORE PE SĂPTĂMÂNĂ
 	for teacher in ore_profesori:
 		if ore_profesori[teacher] > 7:
 			# print(f'Profesorul {teacher} tine mai mult de 7 sloturi!')
-			violated_constr += 1
-			return violated_constr
+			return True
 
-	return violated_constr
+	return False
 
 def get_subject_info(timetable_specs):
 	"""

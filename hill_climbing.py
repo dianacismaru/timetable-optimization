@@ -1,6 +1,6 @@
 from __future__ import annotations
 import copy
-from utils import *
+from helper import *
 
 import random
 
@@ -28,9 +28,9 @@ class State:
 		self.soft_conflicts = soft_conflicts if soft_conflicts is not None \
 			else self.get_soft_conflicts()
 		
-		if self.hard_conflicts > 0:
+		if self.hard_conflicts:
 			tries = 0
-			while self.hard_conflicts > 0 and tries < 1000:
+			while self.hard_conflicts and tries < 1000:
 				self.teacher_schedule, self.timetable = self.generate_timetable()
 				self.hard_conflicts = self.get_hard_conflicts()
 				tries += 1
@@ -125,13 +125,13 @@ class State:
 		return teacher_schedule, timetable
 
 	def get_hard_conflicts(self) -> int:
-		return check_hard_constraints(self.timetable, self.timetable_specs)
+		return breaks_hard_constraints(self.timetable, self.timetable_specs)
 	
 	def get_soft_conflicts(self) -> int:
 		return check_soft_constraints(self.timetable, self.teacher_constraints, self.teacher_schedule)
 
 	def is_final(self) -> bool:
-		return self.soft_conflicts == 0 and self.hard_conflicts == 0
+		return self.soft_conflicts == 0 and self.hard_conflicts == False
  	
 	def get_best_neigh(self) -> tuple[list[State], int]:
 		days = list(self.timetable.keys())
@@ -161,17 +161,9 @@ class State:
 
 	def generate_successor(self, day: str, interval: tuple[int, int], classroom: str, \
 					   new_day: str, new_interval: tuple[int, int], new_classroom: str) -> State:
-		#  ('nume profesor', 'materia predata in acel slot')
+		# Values are tuples (teacher, subject) or None, for each slot
 		first_value = self.timetable[day][interval][classroom]
 		second_value = self.timetable[new_day][new_interval][new_classroom]
-		# if day == 'Luni' and new_day == 'Luni':
-		# 	print("\n\n----------------> LUNI -->")
-		# 	print("interval = ", interval)
-		# 	print("classroom = ", classroom)
-		# 	print("new_interval = ", new_interval)
-		# 	print("new_classroom = ", new_classroom)
-		# 	print("first value = ", first_value)
-		# 	print("second value = ", second_value)
 
 		# nu are rost sa intershimb daca ambele sunt None
 		if first_value is None and second_value is None:
@@ -249,7 +241,7 @@ class State:
 		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, copy.deepcopy(self.timetable), \
 			   		 teacher_schedule=copy.deepcopy(self.teacher_schedule))
 
-def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State, int]:
+def hill_climbing(initial: State, max_iters: int = MAX_ITERATIONS) -> tuple[bool, int, State, int]:
 	iters, total_states = 0, 0
 	state = initial.clone()
 	extra_tries = 0
@@ -289,8 +281,7 @@ def hill_climbing(initial: State, max_iters: int = 10) -> tuple[bool, int, State
 
 def random_restart_hill_climbing(
 	initial: State,
-	max_restarts: int = 70,
-	run_max_iters: int = 40,
+	max_restarts: int = MAX_RESTARTS
 ) -> tuple[bool, int, State, int]:
 
 	total_iters, total_states = 0, 0
@@ -303,7 +294,7 @@ def random_restart_hill_climbing(
 		random.seed(random.random())
 		print("\nrestart ", current_restarts)
 		print("incep cu ", state.soft_conflicts, " soft conflicts")
-		is_final, new_iters, state, states = hill_climbing(state, run_max_iters)
+		is_final, new_iters, state, states = hill_climbing(state)
 		total_iters += new_iters
 		total_states += states
 
@@ -324,29 +315,10 @@ def random_restart_hill_climbing(
 	return is_final, total_iters, state, total_states
 
  
-def hill_climbing_algorithm():
-	filename = f'inputs/dummy.yaml'
-	# filename = f'inputs/orar_mic_exact.yaml'
-	# filename = f'inputs/orar_mediu_relaxat.yaml'
-	# filename = f'inputs/orar_mare_relaxat.yaml'
-	# filename = f'inputs/orar_bonus_exact.yaml'
-	# filename = f'inputs/orar_constrans_incalcat.yaml'
-	print("Fisierul de input: ", filename)
-
-	timetable_specs = read_yaml_file(filename)
-	teacher_constraints = get_teacher_constraints(timetable_specs)
-	subject_info = get_subject_info(timetable_specs)
-
-	# print(teacher_constraints)
+def hill_climbing_algorithm(timetable_specs, teacher_constraints, subject_info) -> dict:
 	timetable = State(timetable_specs, teacher_constraints, subject_info)
 
-	# print(timetable.teacher_schedule)
-	# print(timetable.timetable)
-	# Debug code:
-	# --------------------------------------
-
 	print("Conflicte soft inainte: ", timetable.get_soft_conflicts())
-	print("Start cautari..................")
 	
 	import time
 	start_time = time.time()
@@ -358,7 +330,7 @@ def hill_climbing_algorithm():
 	print("Am facut ", states, " stari")
 	print("Execution time: ", end_time - start_time)
 	
-	print(pretty_print_timetable(timetable.timetable, filename))
+	return timetable.timetable
 
 if __name__ == '__main__':
 	hill_climbing_algorithm()
