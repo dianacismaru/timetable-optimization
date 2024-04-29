@@ -4,7 +4,7 @@ import matplotlib.pyplot as plot
 from helper import read_yaml_file, get_teacher_constraints, get_subject_info, pretty_print_timetable
 from hill_climbing import hill_climbing_algorithm
 
-def print_results(final, iters, timetable, states, restarts, min_soft_conflicts, output_path):
+def print_results(final, iters, timetable, states, restarts, min_soft_conflicts, output_path, end_time, start_time):
 	with open(output_path, 'w') as file:
 		file.write("S-a ajuns in stare finala? " + str(final) + "\n")
 		file.write("Numarul de restart-uri: " + str(restarts) + "\n")
@@ -53,10 +53,10 @@ if __name__ == '__main__':
 		final, iters, timetable, states, restarts, min_soft_conflicts = hill_climbing_algorithm(timetable_specs, teacher_constraints, subject_info)
 		end_time = time.time()
 
-		results.append((iters, states, restarts, min_soft_conflicts))
+		results.append((iters, states, restarts, min_soft_conflicts, end_time - start_time))
 		output_path = f'outputs/{input_file}/{input_file}_{run}.txt'
 		
-		print_results(final, iters, timetable, states, restarts, min_soft_conflicts, output_path)
+		print_results(final, iters, timetable, states, restarts, min_soft_conflicts, output_path, end_time, start_time)
 		run += 1
 
 	# Realizarea graficelor
@@ -64,6 +64,7 @@ if __name__ == '__main__':
 	iters_y = [result[0] for result in results]
 	states_y = [result[1] for result in results]
 	min_soft_conflicts_y = [result[3] for result in results]
+	time_y = [result[4] for result in results]
 	x = [i for i in range(runs)]
 
 	# Plot 1 - Numarul de restart-uri
@@ -98,4 +99,12 @@ if __name__ == '__main__':
 	plot.grid(color = 'green', linestyle = '--', linewidth = 0.5)
 	plot.plot(min_soft_conflicts_y, marker = 'o')
 	
+	plot.show()
+
+	# Plot 5 - Timpul de executie
+	plot.plot(x, time_y)
+	plot.xlabel('Run')
+	plot.ylabel('Timpul de executie')
+	plot.grid(color = 'green', linestyle = '--', linewidth = 0.5)
+	plot.plot(time_y, marker = 'o')
 	plot.show()
