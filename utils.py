@@ -1,6 +1,6 @@
 import yaml
 
-##################### MACROURI #####################
+# MACROS
 INTERVALS = 'Intervale'
 DAYS = 'Zile'
 SUBJECTS = 'Materii'
@@ -23,10 +23,11 @@ def get_profs_initials(profs : list) -> dict:
     Primește o listă de profesori
 
     Returnează două dicționare:
-    - unul care are numele profesorilor drept chei și drept valori prescurtările lor (prof_to_initials[prof] = initiale)
-    - unul care are prescurtările profesorilor drept chei și drept valori numele lor (initials_to_prof[initiale] = prof)
+    - unul care are numele profesorilor drept chei și drept valori prescurtările lor 
+        (prof_to_initials[prof] = initiale)
+    - unul care are prescurtările profesorilor drept chei și drept valori numele lor 
+        (initials_to_prof[initiale] = prof)
     '''
-
     initials_to_prof = {}
     prof_to_initials = {}
     initials_count = {}
@@ -72,11 +73,15 @@ def allign_string_with_spaces(s : str, max_len : int, allignment_type : str = 'c
     return s
 
 
-def pretty_print_timetable(timetable : {str : {(int, int) : {str : (str, str)}}}, input_path : str) -> str:
+def pretty_print_timetable(timetable : {str : {(int, int) : {str : (str, str)}}}, \
+                           input_path : str) -> str:
     '''
-    Primește un dicționar ce are chei zilele, cu valori dicționare de intervale reprezentate ca tupluri de int-uri, cu valori dicționare de săli, cu valori tupluri (profesor, materie)
+    Primește un dicționar ce are chei zilele, cu valori dicționare de intervale reprezentate ca
+     tupluri de int-uri, cu valori dicționare de săli, cu valori tupluri (profesor, materie)
 
-    Returnează un string formatat să arate asemenea unui tabel excel cu zilele pe linii, intervalele pe coloane și în intersecția acestora, ferestrele de 2 ore cu materiile alocate în fiecare sală fiecărui profesor
+    Returnează un string formatat să arate asemenea unui tabel excel cu zilele pe linii, 
+     intervalele pe coloane și în intersecția acestora, ferestrele de 2 ore cu materiile alocate
+     în fiecare sală fiecărui profesor
     '''
 
     max_len = 30
