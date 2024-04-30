@@ -11,7 +11,7 @@ class State:
 		teacher_constraints: dict,
 		subject_info : dict,
 		timetable : dict | None = None,
-		hard_conflicts: int | None = None,
+		breaks_hard_conflicts: int | None = None,
 		soft_conflicts: int | None = None,
 		teacher_schedule: dict | None = None
 	) -> None:
@@ -23,26 +23,34 @@ class State:
 		(self.teacher_schedule, self.timetable) = (teacher_schedule, timetable) \
 			if teacher_schedule is not None and timetable is not None \
 			else self.generate_timetable()
-		self.hard_conflicts = hard_conflicts if hard_conflicts is not None \
+		self.breaks_hard_conflicts = breaks_hard_conflicts if breaks_hard_conflicts is not None \
 			else self.get_hard_conflicts()
 		self.soft_conflicts = soft_conflicts if soft_conflicts is not None \
 			else self.get_soft_conflicts()
 		
-		if self.hard_conflicts:
+		if self.breaks_hard_conflicts:
 			tries = 0
-			while self.hard_conflicts and tries < 1000:
+			while self.breaks_hard_conflicts and tries < 1000:
 				self.teacher_schedule, self.timetable = self.generate_timetable()
-				self.hard_conflicts = self.get_hard_conflicts()
+				self.breaks_hard_conflicts = self.get_hard_conflicts()
 				tries += 1
 			self.soft_conflicts = self.get_soft_conflicts()
 
 	def generate_timetable(self) -> tuple[dict, dict]:
+		'''
+		Genereaza orarul din starea initiala
+
+		Returneaza un tuplu ce contine un dictionar cu orarul profesorilor si un dictionar 
+		 cu orarul salilor
+		'''
+		
 		teacher_schedule = {}
-		free_slots = {}
 		timetable = {}
 		mini_timetable = {}
 		teacher_busy_slots = {}
+		free_slots = {}
 
+		# Initializarea dictionarelor
 		for day in self.timetable_specs[DAYS]:
 			timetable[day] = {}
 			mini_timetable[day] = {}
@@ -58,82 +66,128 @@ class State:
 					if classroom not in free_slots:
 						free_slots[classroom] = []
 
+					# Retin intervalele in care salile sunt goale
 					free_slots[classroom].append((day, slot))
 
+		# Initializarea dictionarului cu orarul profesorilor si contorizarea orelor tinute
 		courses_count = {}
 		for teacher in self.timetable_specs[TEACHERS]:
 			courses_count[teacher] = 0
 			teacher_schedule[teacher] = copy.deepcopy(mini_timetable)
 
+		# Semafor pentru a indica atunci cand se ajunge la o solutie proasta
 		bad_solution = False
+		
+		# Se acopera materiile pe rand
 		for subject, infos in self.subject_info.items():
 			if bad_solution:
 				break
 
 			students_left = infos[STUD_CT]
+
+			# Se alege o sala random si se alege un slot random cat timp mai sunt studenti
+			# de acoperit la materia curenta
 			while students_left > 0:
+				# Sala se alege doar dintre cele in care se poate tine materia
 				classroom, capacity = random.choice(infos[CLASSROOMS])
 
+				# Daca nu mai sunt locuri libere in sala, solutia este proasta
 				if free_slots[classroom] == []:
 					bad_solution = True
 					break
 
+				# Se alege un slot random din cele libere pentru sala curenta
 				random_slot = random.choice(free_slots[classroom])
 				free_slots[classroom].remove(random_slot)
 				(day, slot) = random_slot
 
-				# Candidates are the teachers that are not busy in that slot and that can teach the subject
-				candidates = list(filter(lambda x: x not in teacher_busy_slots[(day, slot)], infos[TEACHERS]))
+				# Se alege un profesor random din cei care pot preda materia si nu sunt ocupati
+				# in intervalul curent
+				candidates = list(filter(lambda x: x not in teacher_busy_slots[(day, slot)],
+										 infos[TEACHERS]))
+				
+				# Se amesteca lista de candidati pentru a alege un profesor random
 				random.shuffle(candidates)
 
+				# Daca nu exista profesori care sa poata preda materia, solutia este proasta
 				if len(candidates) == 0:
 					bad_solution = True
 					break
 
-				candidates_top = list(filter(lambda x: day not in self.teacher_constraints[x][DAYS] \
+				# Se sorteaza profesorii in functie de preferintele lor
+				best_candidates = list(filter(lambda x: day not in self.teacher_constraints[x][DAYS] \
 							 and slot not in self.teacher_constraints[x][INTERVALS], candidates))
 				
-				candidates_mid = list(filter(lambda x: day not in self.teacher_constraints[x][DAYS] \
+				good_candidates1 = list(filter(lambda x: day not in self.teacher_constraints[x][DAYS] \
 							 and slot in self.teacher_constraints[x][INTERVALS], candidates))
 				
-				candidates_midd = list(filter(lambda x: day in self.teacher_constraints[x][DAYS] \
+				good_candidates2 = list(filter(lambda x: day in self.teacher_constraints[x][DAYS] \
 							 and slot not in self.teacher_constraints[x][INTERVALS], candidates))
 
-				candidates_ew = list(filter(lambda x: day in self.teacher_constraints[x][DAYS] \
+				bad_candidates = list(filter(lambda x: day in self.teacher_constraints[x][DAYS] \
 							 and slot in self.teacher_constraints[x][INTERVALS], candidates))
 				
-				candidates = candidates_top + candidates_mid + candidates_midd + candidates_ew
+				candidates = best_candidates + good_candidates1 + good_candidates2 + bad_candidates
+				
+				# Se alege un profesor random din lista de candidati
 				found_candidate = False
 				teacher = None
 				i = 0
 				while not found_candidate and i < len(candidates):
 					teacher = candidates[i]
 					i += 1
+					# Profesorul se poate alege doar daca nu a depasit numarul de ore
 					if courses_count[teacher] < 7:
 						found_candidate = True
 
+				# Daca nu s-a gasit un profesor valid, solutia este proasta
 				if not found_candidate:
 					bad_solution = True
 					break
 
+				# Adaug profesorul la lista de profesori ocupati in intervalul curent
 				teacher_busy_slots[(day, slot)].append(teacher)
+
+				# Se marcheaza slotul profesorului ca fiind ocupat
 				teacher_schedule[teacher][day][slot] += 1
+
+				# Se contorizeaza ora tinuta de profesor
 				courses_count[teacher] += 1
+
+				# Se adauga materia in orar
 				timetable[day][slot][classroom] = (teacher, subject)
+
+				# Se scad studentii de acoperit
 				students_left -= capacity
 
 		return teacher_schedule, timetable
 
 	def get_hard_conflicts(self) -> int:
+		'''
+		Returneaza True daca exista conflicte hard in orar, False altfel
+		'''
+		
 		return breaks_hard_constraints(self.timetable, self.timetable_specs)
 	
 	def get_soft_conflicts(self) -> int:
+		'''
+		Returneaza numarul de conflicte soft din orar
+		'''
+		
 		return check_soft_constraints(self.timetable, self.teacher_constraints, self.teacher_schedule)
 
 	def is_final(self) -> bool:
-		return self.soft_conflicts == 0 and self.hard_conflicts == False
+		'''
+		Returneaza True daca starea este finala, False altfel
+		'''
+		
+		return self.soft_conflicts == 0 and self.breaks_hard_conflicts == False
  	
-	def get_best_neigh(self) -> tuple[list[State], int]:
+	def get_best_neighbors(self) -> tuple[list[State], int]:
+		'''
+		Returneaza o lista cu vecinii starii curente si numarul de stari create
+		'''
+
 		days = list(self.timetable.keys())
 		intervals = list(self.timetable[days[0]].keys())
 		classrooms = list(self.timetable[days[0]][intervals[0]].keys())
@@ -141,17 +195,21 @@ class State:
 		states_created = 0
 		neighbors = []
 
+		# Se aleg toate combinatiile de schimbare a materiilor intre intervale, sali si clase
 		for i in range(num_days):
 			day = days[i]
 			for interval in intervals:
 				for classroom in classrooms:
+					# Nu are rost sa se verifice ce a mai fost verificat deja
 					for x in range(i, num_days):
 						new_day = days[x]
 						for new_interval in intervals:
 							for new_classroom in classrooms:
+								# Se genereaza un nou vecin
 								new_state = self.generate_successor(day, interval, classroom, \
 														new_day, new_interval, new_classroom)
 			
+								# Daca vecinul este valid, se adauga la lista de vecini
 								if new_state is not None:
 									states_created += 1
 									if new_state.soft_conflicts <= self.soft_conflicts:
@@ -161,27 +219,31 @@ class State:
 
 	def generate_successor(self, day: str, interval: tuple[int, int], classroom: str, \
 					   new_day: str, new_interval: tuple[int, int], new_classroom: str) -> State:
-		# Values are tuples (teacher, subject) or None, for each slot
+		'''
+		Returneaza un vecin al starii curente, sau None daca e redundant
+		'''
+
+		# Valorile pot fi tupluri (profesor, materie) sau None
 		first_value = self.timetable[day][interval][classroom]
 		second_value = self.timetable[new_day][new_interval][new_classroom]
 
-		# nu are rost sa intershimb daca ambele sunt None
+		# Interschimbarea este redundanta daca ambele valori sunt None
 		if first_value is None and second_value is None:
-			# print("NONE pentru ca ambele sunt None")
 			return None
 	
-		# daca sunt egale, nu are rost sa le interschimb
+		# Interschimbarea este redundanta daca valorile sunt egale
 		if first_value == second_value:
-			# print("NONE pentru ca sunt egale")
 			return None
 		
-		# trebuie sa verific daca clasele sunt compatibile dpdv al capacitatii si al materiilor predate
-		# daca sunt compatibile, atunci facem schimbul
+		# Se obtin informatiile referitoare la fiecare sala de clasa
 		info_first_class = self.timetable_specs[CLASSROOMS][classroom]
 		info_second_class = self.timetable_specs[CLASSROOMS][new_classroom]
+
+		# Se verifica daca salile au aceeasi capacitate
 		if info_first_class[CAPACITY] != info_second_class[CAPACITY]:
 			return None
 		
+		# Se verifica daca materiile se pot preda in clasele noi
 		if first_value is not None:
 			if first_value[1] not in info_second_class[SUBJECTS]:
 				return None
@@ -190,9 +252,8 @@ class State:
 			if second_value[1] not in info_first_class[SUBJECTS]:
 				return None
 		
-
+		# TODO
 		if first_value is not None and second_value is not None:
-		
 			# materiile la care poate sa predea primul profesor ales
 			info_first_subject = self.timetable_specs[TEACHERS][first_value[0]][SUBJECTS]
 
@@ -229,7 +290,7 @@ class State:
 			second_value, first_value
 		
 		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, new_timetable, \
-			   		 hard_conflicts=self.hard_conflicts, teacher_schedule=new_orar_profesori)
+			   		 breaks_hard_conflicts=self.breaks_hard_conflicts, teacher_schedule=new_orar_profesori)
 
 	def __str__(self) -> str:
 		return str(self.timetable)
@@ -257,7 +318,7 @@ def hill_climbing(initial: State, max_iters: int = MAX_ITERATIONS) -> tuple[bool
 			return True, iters, state, total_states
 
 		iters += 1
-		neighbors, states = state.get_best_neigh()
+		neighbors, states = state.get_best_neighbors()
 		total_states += states
 		if len(neighbors) == 0:
 			break
