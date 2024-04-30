@@ -1,40 +1,40 @@
 S-a ajuns in stare finala? True
 Numarul de restart-uri: 0
-Timpul de executie total: 3.337980270385742
+Timpul de executie total: 8.688878059387207
 Numarul minim de conflicte soft incalcate: 0
-Numarul total de iteratii: 3
-Numar total de stari create: 3968
-Numar mediu de stari create per iteratie: 1322
+Numarul total de iteratii: 5
+Numar total de stari create: 8826
+Numar mediu de stari create per iteratie: 1765
 
 |           Interval           |             Luni             |             Marti            |           Miercuri           |              Joi             |            Vineri            |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|            8 - 10            |      AA : (ED038 - PD)       |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |
-|                              |      ED041 - goala           |      AA : (ED041 - PD)       |      ED041 - goala           |      SOC : (ED041 - IG)      |      ED041 - goala           |
-|                              |      ED069 - goala           |      PL : (ED069 - CA)       |      ED069 - goala           |      ED069 - goala           |      ED069 - goala           |
-|                              |      SOC : (PR011 - IC)      |      AA : (PR011 - MA)       |      PR011 - goala           |      PL : (PR011 - RE)       |      AA : (PR011 - EV)       |
+|            8 - 10            |      AA : (ED038 - EV)       |      AA : (ED038 - PD)       |      ED038 - goala           |      MS : (ED038 - IG)       |      ED038 - goala           |
+|                              |      ED041 - goala           |      MS : (ED041 - IG)       |      ED041 - goala           |      AA : (ED041 - EV)       |      SOC : (ED041 - IC)      |
+|                              |      PL : (ED069 - RE)       |      PL : (ED069 - CA)       |      AA : (ED069 - PD)       |      ED069 - goala           |      PL : (ED069 - RE)       |
+|                              |      SOC : (PR011 - MA)      |      SOC : (PR011 - IC)      |      PL : (PR011 - MA2)      |      AA : (PR011 - MA2)      |      MS : (PR011 - IG)       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|            10 - 12           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |
-|                              |      AA : (ED041 - DP)       |      ED041 - goala           |      AA : (ED041 - MA)       |      ED041 - goala           |      ED041 - goala           |
-|                              |      PL : (ED069 - RE)       |      PL : (ED069 - CA)       |      ED069 - goala           |      SOC : (ED069 - RD)      |      ED069 - goala           |
-|                              |      MS : (PR011 - MP)       |      PL : (PR011 - MA2)      |      SOC : (PR011 - RD)      |      MS : (PR011 - CA)       |      PL : (PR011 - RE)       |
+|            10 - 12           |      AA : (ED038 - SA)       |      ED038 - goala           |      AA : (ED038 - MA2)      |      ED038 - goala           |      ED038 - goala           |
+|                              |      MS : (ED041 - CA)       |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |
+|                              |      MS : (ED069 - MP)       |      ED069 - goala           |      AA : (ED069 - MA)       |      ED069 - goala           |      MS : (ED069 - IC)       |
+|                              |      AA : (PR011 - EV)       |      PR011 - goala           |      PL : (PR011 - CA)       |      PR011 - goala           |      PR011 - goala           |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|            12 - 14           |      SOC : (ED038 - CF)      |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |
-|                              |      MS : (ED041 - CA)       |      MS : (ED041 - CA)       |      MS : (ED041 - CA)       |      SOC : (ED041 - RA)      |      ED041 - goala           |
-|                              |      ED069 - goala           |      MS : (ED069 - IG)       |      SOC : (ED069 - SA)      |      ED069 - goala           |      ED069 - goala           |
-|                              |      AA : (PR011 - MA2)      |      AA : (PR011 - CF)       |      PR011 - goala           |      AA : (PR011 - DA)       |      PR011 - goala           |
+|            12 - 14           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      PL : (ED038 - MA2)      |      ED038 - goala           |
+|                              |      AA : (ED041 - MA2)      |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |
+|                              |      ED069 - goala           |      SOC : (ED069 - CF)      |      AA : (ED069 - SA)       |      MS : (ED069 - CA)       |      ED069 - goala           |
+|                              |      PL : (PR011 - CA)       |      SOC : (PR011 - IG)      |      SOC : (PR011 - CF)      |      MS : (PR011 - IG)       |      SOC : (PR011 - DA)      |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|            14 - 16           |      ED038 - goala           |      PL : (ED038 - RE)       |      ED038 - goala           |      ED038 - goala           |      PL : (ED038 - RE)       |
-|                              |      ED041 - goala           |      SOC : (ED041 - MA)      |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |
-|                              |      ED069 - goala           |      SOC : (ED069 - IG)      |      ED069 - goala           |      ED069 - goala           |      AA : (ED069 - DA)       |
-|                              |      PR011 - goala           |      PL : (PR011 - MA2)      |      MS : (PR011 - RA2)      |      PL : (PR011 - MA2)      |      SOC : (PR011 - IG)      |
+|            14 - 16           |      MS : (ED038 - MP)       |      ED038 - goala           |      AA : (ED038 - CF)       |      ED038 - goala           |      PL : (ED038 - RE)       |
+|                              |      AA : (ED041 - CF)       |      ED041 - goala           |      SOC : (ED041 - MA)      |      ED041 - goala           |      SOC : (ED041 - IG)      |
+|                              |      PL : (ED069 - RE)       |      AA : (ED069 - CF)       |      PL : (ED069 - MA2)      |      SOC : (ED069 - CF)      |      ED069 - goala           |
+|                              |      PR011 - goala           |      AA : (PR011 - RA2)      |      PR011 - goala           |      SOC : (PR011 - DA)      |      MS : (PR011 - MP)       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|            16 - 18           |      SOC : (ED038 - MA)      |      SOC : (ED038 - CF)      |      AA : (ED038 - CF)       |      ED038 - goala           |      ED038 - goala           |
-|                              |      ED041 - goala           |      ED041 - goala           |      MS : (ED041 - CA)       |      MS : (ED041 - IG)       |      ED041 - goala           |
-|                              |      ED069 - goala           |      ED069 - goala           |      SOC : (ED069 - MP)      |      ED069 - goala           |      ED069 - goala           |
-|                              |      MS : (PR011 - IC)       |      AA : (PR011 - MA)       |      SOC : (PR011 - IG)      |      AA : (PR011 - CF)       |      PL : (PR011 - RE)       |
+|            16 - 18           |      PL : (ED038 - CA)       |      SOC : (ED038 - IG)      |      PL : (ED038 - CA)       |      ED038 - goala           |      AA : (ED038 - MA)       |
+|                              |      ED041 - goala           |      ED041 - goala           |      AA : (ED041 - SA)       |      ED041 - goala           |      ED041 - goala           |
+|                              |      MS : (ED069 - MP)       |      ED069 - goala           |      MS : (ED069 - RA2)      |      PL : (ED069 - RE)       |      PL : (ED069 - RE)       |
+|                              |      MS : (PR011 - PD)       |      PL : (PR011 - RE)       |      PR011 - goala           |      PR011 - goala           |      PR011 - goala           |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|            18 - 20           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      MS : (ED038 - IG)       |      SOC : (ED038 - IC)      |
-|                              |      ED041 - goala           |      SOC : (ED041 - IC)      |      MS : (ED041 - PD)       |      AA : (ED041 - DA)       |      ED041 - goala           |
-|                              |      ED069 - goala           |      MS : (ED069 - PD)       |      PL : (ED069 - MA2)      |      SOC : (ED069 - SA)      |      ED069 - goala           |
-|                              |      PL : (PR011 - MA2)      |      MS : (PR011 - RA2)      |      MS : (PR011 - RA2)      |      MS : (PR011 - RA2)      |      SOC : (PR011 - MP)      |
+|            18 - 20           |      MS : (ED038 - MP)       |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |      ED038 - goala           |
+|                              |      ED041 - goala           |      ED041 - goala           |      ED041 - goala           |      MS : (ED041 - RA2)      |      ED041 - goala           |
+|                              |      AA : (ED069 - DP)       |      AA : (ED069 - PD)       |      ED069 - goala           |      ED069 - goala           |      SOC : (ED069 - MP)      |
+|                              |      PL : (PR011 - MA2)      |      SOC : (PR011 - IC)      |      SOC : (PR011 - RD)      |      MS : (PR011 - PD)       |      MS : (PR011 - IC)       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
