@@ -5,6 +5,9 @@ from helper import read_yaml_file, get_teacher_constraints, get_subject_info, pr
 from hill_climbing import hill_climbing_algorithm
 
 def print_results(final, iters, timetable, states, restarts, min_soft_conflicts, output_path, end_time, start_time):
+	'''
+	Afiseaza rezultatele obtinute in fisierul de output
+	'''
 	with open(output_path, 'w') as file:
 		file.write("S-a ajuns in stare finala? " + str(final) + "\n")
 		file.write("Numarul de restart-uri: " + str(restarts) + "\n")
@@ -38,6 +41,7 @@ if __name__ == '__main__':
 		print('Algoritmul specificat nu exista sau nu a fost implementat. S-a implementat doar Hill Climbing --> "hc"')
 		sys.exit(1)
 
+	# Citirea datelor din fisierul de input si restructurarea acestora
 	timetable_specs = read_yaml_file(input_path)
 	teacher_constraints = get_teacher_constraints(timetable_specs)
 	subject_info = get_subject_info(timetable_specs)
@@ -54,10 +58,14 @@ if __name__ == '__main__':
 		end_time = time.time()
 
 		results.append((iters, states, restarts, min_soft_conflicts, end_time - start_time))
-		output_path = f'outputs/{input_file}/{input_file}_{run}.txt'
+		output_path = f'outputs-test/{input_file}_{run}.txt'
 		
 		print_results(final, iters, timetable, states, restarts, min_soft_conflicts, output_path, end_time, start_time)
 		run += 1
+
+	# Programul se opreste daca nu se doresc a fi realizate grafice
+	if runs == 1:
+		exit(0)
 
 	# Realizarea graficelor
 	restarts_y = [result[2] for result in results]
