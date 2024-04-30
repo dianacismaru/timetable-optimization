@@ -1,8 +1,7 @@
 from __future__ import annotations
 import copy
-from helper import *
-
 import random
+from helper import *
 
 class State:
 	def __init__(
@@ -252,83 +251,84 @@ class State:
 			if second_value[1] not in info_first_class[SUBJECTS]:
 				return None
 		
-		# TODO
+		# Se verifica ca intervalele profesorilor sa nu fie deja ocupate
 		if first_value is not None and second_value is not None:
-			# materiile la care poate sa predea primul profesor ales
-			info_first_subject = self.timetable_specs[TEACHERS][first_value[0]][SUBJECTS]
-
-			# materiile la care poate sa predea al doilea profesor ales
-			info_second_subject = self.timetable_specs[TEACHERS][second_value[0]][SUBJECTS]
-
-			if first_value[1] not in info_second_subject \
-				or second_value[1] not in info_first_subject:
-				return None
-			
-			# trebuie sa verific ca intervalele profesorilor nu sunt deja ocupate
 			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0 \
 				or self.teacher_schedule[second_value[0]][day][interval] > 0:
 				return None
-			
+
+		# Se genereaza un nou orar			
 		new_timetable = copy.deepcopy(self.timetable)
-		new_orar_profesori = copy.deepcopy(self.teacher_schedule)
+		new_teacher_schedule = copy.deepcopy(self.teacher_schedule)
 
 		if first_value is not None:
 			if self.teacher_schedule[first_value[0]][new_day][new_interval] > 0:
 				return None
 			
-			new_orar_profesori[first_value[0]][new_day][new_interval] += 1
-			new_orar_profesori[first_value[0]][day][interval] = 0
+			# Se actualizeaza orarul primului profesor
+			new_teacher_schedule[first_value[0]][new_day][new_interval] += 1
+			new_teacher_schedule[first_value[0]][day][interval] = 0
 
 		if second_value is not None:
 			if self.teacher_schedule[second_value[0]][day][interval] > 0:
 				return None
 			
-			new_orar_profesori[second_value[0]][day][interval] += 1
-			new_orar_profesori[second_value[0]][new_day][new_interval] = 0
+			# Se actualizeaza orarul celui de-al doilea profesor
+			new_teacher_schedule[second_value[0]][day][interval] += 1
+			new_teacher_schedule[second_value[0]][new_day][new_interval] = 0
 
+		# Se interschimba informatiile dintre cele doua intervale
 		new_timetable[day][interval][classroom], new_timetable[new_day][new_interval][new_classroom] = \
 			second_value, first_value
 		
+		# Se genereaza starea noua
 		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, new_timetable, \
-			   		 breaks_hard_conflicts=self.breaks_hard_conflicts, teacher_schedule=new_orar_profesori)
-
-	def __str__(self) -> str:
-		return str(self.timetable)
-
-	def display(self) -> None:
-		print(self)
+			   		 breaks_hard_conflicts=self.breaks_hard_conflicts, teacher_schedule=new_teacher_schedule)
 
 	def clone(self) -> State:
-		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, copy.deepcopy(self.timetable), \
-			   		 teacher_schedule=copy.deepcopy(self.teacher_schedule))
+		return State(self.timetable_specs, self.teacher_constraints, self.subject_info, 
+			   		 copy.deepcopy(self.timetable), teacher_schedule=copy.deepcopy(self.teacher_schedule))
 
 def hill_climbing(initial: State, max_iters: int = MAX_ITERATIONS) -> tuple[bool, int, State, int]:
+	'''
+	Implementeaza algoritmul Hill Climbing Stochastic
+	'''
 	iters, total_states = 0, 0
 	state = initial.clone()
 	extra_tries = 0
 
 	while iters < max_iters + extra_tries:
-		if extra_tries > 30 and iters >= max_iters:
+		# Daca dupa multe iteratii nu s-a gasit un cost mai bun, se opreste cautarea
+		if extra_tries > EXTRA_TRIES and iters >= max_iters:
 			break
 
 		random.seed(random.random())
 		prev_conflicts = state.soft_conflicts
 
+		# Daca se respecta toate constrangerile, s-a gasit o solutie de cost 0
 		if state.soft_conflicts == 0:
 			return True, iters, state, total_states
 
 		iters += 1
+
+		# Se genereaza succesorii starii curente
 		neighbors, states = state.get_best_neighbors()
 		total_states += states
 		if len(neighbors) == 0:
 			break
 
-		# best neigh is the one with the lowest number of soft conflicts from neighbors
+		# Se obtin costurile vecinilor
 		costs = [neigh.soft_conflicts for neigh in neighbors]
 		cost_minim_vecini = min(costs)
+
+		# Se aleg vecinii cu costul minim
 		best_neighbors = [neigh for neigh in neighbors if neigh.soft_conflicts == cost_minim_vecini]
+		
+		# Se alege un vecin random din cei cu costul minim
 		best_neighbor = random.choice(best_neighbors)
 
+		# Cat timp se gasesc doar vecini cu acelasi cost ca cel anterior, dar mai mic de 3,
+		# se incearca in continuare sa se gaseasca o solutie mai buna
 		if cost_minim_vecini == prev_conflicts and cost_minim_vecini < 3:
 			extra_tries += 1
 		else:
@@ -341,7 +341,7 @@ def hill_climbing(initial: State, max_iters: int = MAX_ITERATIONS) -> tuple[bool
 def random_restart_hill_climbing(
 	initial: State,
 	max_restarts: int = MAX_RESTARTS
-) -> tuple[bool, int, State, int]:
+) -> tuple[bool, int, State, int, int, int]:
 
 	total_iters, total_states = 0, 0
 	current_restarts = 0
@@ -356,6 +356,7 @@ def random_restart_hill_climbing(
 		total_iters += new_iters
 		total_states += states
 
+		# Daca s-a gasit o solutie finala, se opreste cautarea
 		if is_final:
 			min_soft_conflicts = 0
 			break
@@ -364,6 +365,8 @@ def random_restart_hill_climbing(
 			min_soft_conflicts = state.soft_conflicts
 
 		current_restarts += 1
+
+		# Daca mai sunt restart-uri disponibile, se reia cautarea cu o noua stare initiala
 		if current_restarts <= max_restarts:
 			state = State(state.timetable_specs, state.teacher_constraints, state.subject_info)
 

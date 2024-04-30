@@ -2,6 +2,7 @@ from utils import *
 
 MAX_RESTARTS = 70
 MAX_ITERATIONS = 40
+EXTRA_TRIES = 30
 
 def breaks_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}}, timetable_specs : dict):
 	'''
@@ -47,9 +48,10 @@ def breaks_hard_constraints(timetable : {str : {(int, int) : {str : (str, str)}}
 
 	return False
 
-def get_subject_info(timetable_specs):
-	"""
-	subject_info:
+def get_subject_info(timetable_specs) -> dict:
+	'''
+	Returneaza un dictionar cu informatii despre fiecare materie
+	Exemplu:
 		DS:
 			STUD_CT: 100
 			CLASSROOMS: [EG390]
@@ -62,7 +64,8 @@ def get_subject_info(timetable_specs):
 			STUD_CT: 75
 			CLASSROOMS: [EG324]
 			TEACHERS: [PF, AD]
-	"""
+	'''
+
 	subject_info = {}
 	for subject in timetable_specs[SUBJECTS]:
 		subject_info[subject] = {}
@@ -78,16 +81,17 @@ def get_subject_info(timetable_specs):
 		for subject in info[SUBJECTS]:
 			subject_info[subject][TEACHERS].append(teacher)
 
+	# Sorteaza materiile in functie de cati profesori pot preda materia respectiva
 	subject_info = dict(sorted(subject_info.items(), key=lambda x: len(x[1][TEACHERS]), reverse=True))
 	return subject_info
 
 def get_breaks(lst) -> list[int]:
-	"""
+	'''
 		Calculeaza numarul de zero-uri intre 1-uri dintr-o lista
 		exemplu:
 		[1, 0, 0, 0, 1] -> [3] -> este o pauza de 3 intervale, adica de 6 ore
 		[1, 0, 1, 0, 0, 1] -> [1, 2] --> sunt 2 pauze, una de 2 ore (un interval) si una de 4 ore (2 intervale)
-	"""
+	'''
 	i = 0
 	result = []
 	while i < len(lst) - 2:
@@ -108,20 +112,37 @@ def get_breaks(lst) -> list[int]:
 	return result
 
 def check_soft_constraints(timetable : dict, teacher_constraints: dict, teacher_schedule : dict):
+	'''
+	Numara cate constrangeri soft sunt violate
+	'''
+
 	violated_constr = 0
+	
 	for teacher in teacher_constraints:
 		for day in timetable:
 			for interval in timetable[day]:
+				
+				# Se verifica daca profesorul preda in intervalul respectiv
 				if teacher_schedule[teacher][day][interval] > 0:
+
+					# Se verifica daca profesorul are constrangeri pe ziua respectiva
 					if day in teacher_constraints[teacher][DAYS]:
 						violated_constr += 1
 
+					# Se verifica daca profesorul are constrangeri pe intervalul respectiv
 					if interval in teacher_constraints[teacher][INTERVALS]:
 						violated_constr += 1
 			
+			# Se verifica daca profesorul are constrangeri de pauze
 			if teacher_constraints[teacher][BREAK] is not None:
+
+				# !Pauza > break_interval
 				break_interval = teacher_constraints[teacher][BREAK]
+
+				# Se obtine o lista pe toata ziua cu: 1, daca profesorul preda in intervalul respectiv, 0 altfel
 				breaks_list = [teaches for _, teaches in teacher_schedule[teacher][day].items()]
+				
+				# Se obtin lungimile pauzelor si numarul lor
 				result = get_breaks(breaks_list)
 
 				if break_interval == 0 and len(result) != 0:
@@ -136,7 +157,12 @@ def check_soft_constraints(timetable : dict, teacher_constraints: dict, teacher_
 	return violated_constr
 
 def get_teacher_constraints(timetable_specs : dict) -> dict:
+	'''
+	Returneaza un dictionar cu constrangerile pe care le are fiecare profesor
+	'''
+
 	teacher_constraints = {}
+
 	for teacher in timetable_specs[TEACHERS]:
 		teacher_constraints[teacher] = {}
 		teacher_constraints[teacher][DAYS] = []
@@ -149,11 +175,11 @@ def get_teacher_constraints(timetable_specs : dict) -> dict:
 			else:
 				constraint = constraint[1:]
 
-				# !zi
+				# Se verifica daca constrangerea este pe zi
 				if constraint in timetable_specs[DAYS]:
 					teacher_constraints[teacher][DAYS].append(constraint)
 
-				# !interval
+				# Se verifica daca constrangerea este pe interval
 				elif '-' in constraint:
 					interval = parse_interval(constraint)
 					start, end = interval
@@ -165,6 +191,7 @@ def get_teacher_constraints(timetable_specs : dict) -> dict:
 
 					teacher_constraints[teacher][INTERVALS].extend(intervals)
 
+				# Se verifica daca constrangerea este pe pauze
 				else:
 					teacher_constraints[teacher][BREAK] = int(constraint[-1])
 
